@@ -6,7 +6,7 @@
 class GHLIntegration {
     constructor() {
         // Points to your local Vercel API route to keep the GHL URL hidden
-        this.webhookUrl = '/api/submit-quote'; 
+        this.webhookUrl = 'https://multiply-talents-service-estimator.vercel.app/api/submit-quote'; 
         
         this.customFields = window.GHL_CONFIG?.customFields || {};
         
