@@ -5,9 +5,8 @@
 
 class GHLIntegration {
     constructor() {
-        this.webhookUrl = window.GHL_CONFIG?.webhookUrl || 
-                         process.env.GHL_WEBHOOK_URL || 
-                         'https://services.leadconnectorhq.com/hooks/Yp6DgG6fJ3iJGTvYs0U5/webhook-trigger/4256QY5zVfdys5jpy8a9';
+        // Points to your local Vercel API route to keep the GHL URL hidden
+        this.webhookUrl = '/api/submit-quote'; 
         
         this.customFields = window.GHL_CONFIG?.customFields || {};
         
@@ -20,8 +19,8 @@ class GHLIntegration {
     async submitQuote(contactData, quoteData, state) {
         const payload = this.formatGHLPayload(contactData, quoteData, state);
         
-        console.log('Submitting to GHL:', {
-            webhookUrl: this.webhookUrl,
+        // Removed the explicit URL from the log so it stays hidden in the console
+        console.log('Submitting to GHL Proxy...', {
             payload: payload
         });
         
