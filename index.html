@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Service Estimator - MultiplyTalents</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- GHL Configuration Injection -->
+    <script>
+        // GHL-specific configuration (injected by GHL)
+        window.GHL_CONFIG = {
+            webhookUrl: '{{custom.estimator_webhook_url}}',
+            customFields: {
+                selected_services: '{{contact.selected_services}}',
+                business_scale: '{{contact.business_scale}}',
+                service_level: '{{contact.service_level}}',
+                industry_type: '{{contact.industry_type}}',
+                estimated_investment: '{{contact.estimated_investment}}',
+                bundle_discount: '{{contact.bundle_discount}}',
+                final_quote_total: '{{contact.final_quote_total}}',
+                project_description: '{{contact.project_description}}',
+                video_walkthrough: '{{contact.video_walkthrough}}',
+                full_quote_json: '{{contact.full_quote_json}}'
+            }
+        };
+    </script>
+</head>
+<body>
+    <div id="estimator-app">
+        <!-- Progress Steps -->
+        <div class="progress-section">
+            <div class="progress-container">
+                <div class="progress-steps" id="progress-steps">
+                    <!-- Progress steps will be injected here by JavaScript -->
+                    <div class="progress-line"></div>
+                    <div class="progress-line-active" id="progress-line-active"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="content-wrapper">
+                <!-- Correct layout structure - Main content and Sidebar as siblings -->
+                <div class="estimator-layout">
+                    
+                    <!-- Main Content Column -->
+                    <div class="estimator-main">
+                        <div class="estimator-card">
+                            <!-- STEP 1: SERVICES -->
+                            <div id="step-services" class="step-content active">
+                                <div class="step-header">
+                                    <h2>Select Your Services</h2>
+                                    <p>Choose one or more services to get started with your custom estimate</p>
+                                    <div class="context-indicator">
+                                        <span>📍</span>
+                                        <span>Step 1 of 5: Selecting Services</span>
+                                    </div>
+                                </div>
+                                <div class="step-body">
+                                    <div class="help-banner">
+                                        <span class="help-banner-icon">💡</span>
+                                        <div class="help-banner-content">
+                                            <p><strong>Tip:</strong> Select multiple services to receive a 5% bundle discount.</p>
+                                        </div>
+                                    </div>
+                                    <div class="services-grid" id="services-grid"></div>
+                                </div>
+                                <div class="step-footer">
+                                    <button class="btn btn-ghost" disabled>← Back</button>
+                                    <button id="services-continue" class="btn btn-primary" disabled>Continue to Scope →</button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 2: SCOPE -->
+                            <div id="step-scope" class="step-content">
+                                <div class="step-header">
+                                    <h2>Define Your Project Scope</h2>
+                                    <p>Tell us about your business to help us customize your setup</p>
+                                    <div class="context-indicator">
+                                        <span>📍</span>
+                                        <span>Step 2 of 5: Defining Scope</span>
+                                    </div>
+                                </div>
+                                <div class="step-body" id="step-scope-body">
+                                    <!-- Content will be injected by JavaScript -->
+                                </div>
+                                <div class="step-footer">
+                                    <button id="scope-back" class="btn btn-ghost">← Back to Services</button>
+                                    <button id="scope-continue" class="btn btn-primary" disabled>Continue to Details →</button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 3: DETAILS -->
+                            <div id="step-details" class="step-content">
+                                <div class="step-header">
+                                    <h2>Configure Service Details</h2>
+                                    <p>Customize each service to match your specific requirements</p>
+                                    <div class="context-indicator">
+                                        <span>📍</span>
+                                        <span>Step 3 of 5: Configuring Details</span>
+                                    </div>
+                                </div>
+                                <div class="step-body" id="step-details-body">
+                                    <!-- Content injected by JavaScript -->
+                                </div>
+                                <div class="step-footer">
+                                    <button id="details-back" class="btn btn-ghost">← Back to Scope</button>
+                                    <button id="details-continue" class="btn btn-primary">Continue to Review →</button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 4: REVIEW -->
+                            <div id="step-review" class="step-content">
+                                <div class="step-header">
+                                    <h2>Review Your Investment</h2>
+                                    <p>Review your customized proposal before submitting your quote request</p>
+                                    <div class="context-indicator">
+                                        <span>📍</span>
+                                        <span>Step 4 of 5: Reviewing Proposal</span>
+                                    </div>
+                                </div>
+                                <div class="step-body" id="step-review-body">
+                                    <!-- Content injected by JavaScript -->
+                                </div>
+                                <div class="step-footer">
+                                    <button id="review-back" class="btn btn-ghost">← Back to Details</button>
+                                    <button id="review-continue" class="btn btn-primary">Continue to Contact →</button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 5: CONTACT -->
+                            <div id="step-contact" class="step-content">
+                                <div class="step-header">
+                                    <h2>Get Your Custom Quote</h2>
+                                    <p>Submit your information to receive a detailed proposal within 24 hours</p>
+                                    <div class="context-indicator">
+                                        <span>📍</span>
+                                        <span>Step 5 of 5: Final Step</span>
+                                    </div>
+                                </div>
+                                <div class="step-body" id="step-contact-body">
+                                    <div class="quote-grid">
+                                        <div class="quote-form">
+                                            <h3>Your Contact Information</h3>
+                                            <div class="help-banner">
+                                                <span class="help-banner-icon">🔒</span>
+                                                <div class="help-banner-content">
+                                                    <p>Your information is secure and will only be used to send your custom quote.</p>
+                                                </div>
+                                            </div>
+                                            <form id="quote-form">
+                                                <div class="form-group">
+                                                    <input type="text" class="form-input" name="firstName" placeholder="Your First Name *" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="text" class="form-input" name="lastName" placeholder="Your Last Name">
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="email" class="form-input" name="email" placeholder="Email Address *" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="text" class="form-input" name="company" placeholder="Company Name (Optional)">
+                                                </div>
+                                                <div class="form-group">
+                                                    <textarea class="form-input form-textarea" name="projectDescription" placeholder="Tell us about your project..." rows="3"></textarea>
+                                                </div>
+                                                <button type="button" class="video-option" id="video-option">
+                                                    <div class="checkbox" id="video-checkbox">
+                                                        <span class="checkbox-check">✓</span>
+                                                    </div>
+                                                    <div class="video-option-text">
+                                                        <h4>Include Video Walkthrough</h4>
+                                                        <p>Get a personalized video explaining your quote</p>
+                                                    </div>
+                                                </button>
+                                                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                                                    Submit Quote Request
+                                                </button>
+                                                <div class="form-divider">
+                                                    <button type="button" class="btn btn-outline" style="width: 100%; justify-content: center;">
+                                                        📅 Book a Discovery Call
+                                                    </button>
+                                                    <p style="text-align: center; font-size: 0.8125rem; color: var(--text-muted); margin-top: 0.75rem;">
+                                                        Free 15-min call to discuss your needs
+                                                    </p>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="step-footer">
+                                    <button id="contact-back" class="btn btn-ghost">← Back to Review</button>
+                                    <button class="btn btn-outline" onclick="resetEstimator()">Start Over</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End Main Content Column -->
+
+                    <!-- Sidebar Column - This is the sibling that sits beside the main content -->
+                    <div class="estimator-sidebar">
+                        <div class="summary-card">
+                            <div class="summary-header">
+                                <div class="summary-title">
+                                    <div class="summary-icon">📋</div>
+                                    <div>
+                                        <h3>Investment Summary</h3>
+                                        <p>Real-time calculation</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="summary-content" id="summary-content">
+                                <!-- Content will be injected by JavaScript -->
+                                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+                                    <p style="font-weight: 500; margin-bottom: 0.25rem;">No Services Selected</p>
+                                    <p style="font-size: 0.875rem;">Select services to see your investment breakdown</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End Sidebar Column -->
+
+                </div>
+                <!-- End estimator-layout -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript Modules in Correct Order -->
+    <script src="src/config.js"></script>
+    <script src="src/state.js"></script>
+    <script src="src/calculator.js"></script>
+    <script src="src/ui.js"></script>
+    <script src="src/ghl-integration.js"></script>
+    <script src="src/main.js"></script>
+    
+    <!-- Immediate sidebar initialization script -->
+    <script>
+        // This script ensures sidebar is properly initialized
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing sidebar...');
+            
+            // Initialize sidebar with default state
+            setTimeout(function() {
+                if (window.serviceEstimator && window.serviceEstimator.updateSidebar) {
+                    console.log('Updating sidebar...');
+                    window.serviceEstimator.updateSidebar();
+                }
+            }, 100);
+            
+            // Also update sidebar when service cards are clicked
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.service-card')) {
+                    setTimeout(function() {
+                        if (window.serviceEstimator && window.serviceEstimator.updateSidebar) {
+                            window.serviceEstimator.updateSidebar();
+                        }
+                    }, 50);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

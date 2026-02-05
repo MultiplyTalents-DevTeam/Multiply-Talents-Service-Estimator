@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+dist/
+
+# Environment - CRITICAL FOR SECURITY
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel (Add this section)
+.vercel/
+
+# Build outputs
+*.log
+*.tmp
+*.temp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Development/Production
+coverage/
+.nyc_output/
+build/
+.cache/
