@@ -267,10 +267,10 @@
 <script>
   (function () {
     function sendHeight() {
-      const height = Math.max(
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight
-      );
+      const app = document.getElementById("estimator-app");
+      if (!app) return;
+
+      const height = app.offsetHeight;
 
       window.parent.postMessage(
         { type: "MT_ESTIMATOR_HEIGHT", height },
