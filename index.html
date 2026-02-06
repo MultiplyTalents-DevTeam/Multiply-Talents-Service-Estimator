@@ -263,5 +263,41 @@
             });
         });
     </script>
+
+<script>
+  (function () {
+    function sendHeight() {
+      const height = Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight
+      );
+
+      window.parent.postMessage(
+        { type: "MT_ESTIMATOR_HEIGHT", height },
+        "*"
+      );
+    }
+
+    window.addEventListener("load", sendHeight);
+    window.addEventListener("resize", sendHeight);
+
+    let resizeTimeout;
+    const observer = new MutationObserver(() => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(sendHeight, 50);
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true
+    });
+
+    window.forceResize = sendHeight;
+  })();
+</script>
+
+
+
 </body>
 </html>
