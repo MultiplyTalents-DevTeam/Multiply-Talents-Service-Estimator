@@ -1323,6 +1323,89 @@ body {
     }
 }
 
+
+/* ========================================
+   GLOBAL CARD INTERACTIVE STATES
+   Targets: Services, Scope Options, and Video Options
+======================================== */
+
+/* 1. Base Transition for all cards */
+.service-card, 
+.config-option, 
+.video-option {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+    user-select: none;
+}
+
+/* 2. Hover State - The "Lift" effect */
+.service-card:hover, 
+.config-option:hover, 
+.video-option:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-gold) !important;
+    box-shadow: var(--shadow-md);
+}
+
+/* 3. Click/Active State - The "Button Press" effect */
+.service-card:active, 
+.config-option:active, 
+.video-option:active {
+    transform: translateY(-1px) scale(0.98);
+    transition: transform 0.1s !important;
+}
+
+/* 4. Selected State - The "Button On" look */
+.service-card.selected, 
+.config-option.selected, 
+.video-option.selected {
+    background-color: var(--bg-selected) !important;
+    border-color: var(--accent-gold) !important;
+    box-shadow: var(--shadow-glow) !important;
+    /* Keeps the lifted state while selected */
+    transform: translateY(-2px); 
+}
+
+/* 5. Tooltip Hints (Click to select / Selected) */
+.service-card::after,
+.config-option::after,
+.video-option::after {
+    content: 'Click to select';
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+/* Show "Click to select" on hover if NOT selected */
+.service-card:hover:not(.selected)::after,
+.config-option:hover:not(.selected)::after,
+.video-option:hover:not(.selected)::after {
+    opacity: 1;
+}
+
+/* Show "Selected" permanently when card is active */
+.service-card.selected::after,
+.config-option.selected::after,
+.video-option.selected::after {
+    content: 'Selected';
+    color: var(--accent-gold);
+    opacity: 1;
+}
+
+/* Adjust padding on video option to make room for the text hint */
+.video-option {
+    padding-bottom: 2rem !important;
+}
+
+
 /* ========================================
    UTILITIES
 ======================================== */

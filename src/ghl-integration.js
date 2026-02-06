@@ -1,6 +1,6 @@
 /**
  * GHL INTEGRATION MODULE
- * Handles all GHL-specific operations
+ * Handles all GHL-specific operations and Vercel proxying
  */
 
 class GHLIntegration {
@@ -26,13 +26,19 @@ class GHLIntegration {
         this.retryDelay = 1000;
     }
 
+    // ==================== VALIDATION ====================
+    validateContactData(data) {
+        const errors = [];
+        if (!data.firstName) errors.push("First name is required.");
+        if (!data.email || !data.email.includes('@')) errors.push("A valid email is required.");
+        return errors;
+    }
+
     // ==================== WEBHOOK INTEGRATION ====================
     async submitQuote(contactData, quoteData, state) {
         const payload = this.formatGHLPayload(contactData, quoteData, state);
         
-        console.log('Submitting to Vercel Proxy...', {
-            payload: payload
-        });
+        console.log('Submitting to Vercel Proxy...', { payload });
         
         try {
             const response = await this.sendWithRetry(payload);
@@ -72,6 +78,37 @@ class GHLIntegration {
         }
     }
 
+    // ==================== OFFLINE SUPPORT ====================
+    async retryFailedSubmissions() {
+        try {
+            const failed = JSON.parse(localStorage.getItem('ghl_failed_submissions') || '[]');
+            if (failed.length === 0) return 0;
+
+            console.log(`Attempting to retry ${failed.length} failed submissions...`);
+            let successfulCount = 0;
+
+            for (const item of failed) {
+                try {
+                    const response = await fetch(this.webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(item.payload)
+                    });
+                    if (response.ok) successfulCount++;
+                } catch (e) {
+                    console.error('Retry attempt failed for item:', e);
+                }
+            }
+
+            // Clear local storage after retry attempt
+            localStorage.setItem('ghl_failed_submissions', '[]'); 
+            return successfulCount;
+        } catch (error) {
+            console.error('Failed to retry submissions:', error);
+            return 0;
+        }
+    }
+
     // ==================== DATA FORMATTING ====================
     formatGHLPayload(contactData, quoteData, state) {
         return {
@@ -81,7 +118,6 @@ class GHLIntegration {
             phone: contactData.phone || '',
             company: contactData.company || '',
             
-            // Map to GHL custom fields
             customField: {
                 [this.fieldKeys.selected_services]: state.selectedServices.join(', '),
                 [this.fieldKeys.business_scale]: state.commonConfig.scale || 'solopreneur',
@@ -104,7 +140,6 @@ class GHLIntegration {
         };
     }
 
-    // ==================== HELPER METHODS ====================
     getPrimaryServiceLevel(state) {
         let highestLevel = 'standard';
         state.selectedServices.forEach(serviceId => {
@@ -151,5 +186,4 @@ class GHLIntegration {
     }
 }
 
-// Create singleton instance
 window.ghlIntegration = new GHLIntegration();
