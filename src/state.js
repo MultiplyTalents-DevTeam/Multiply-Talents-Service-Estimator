@@ -14,9 +14,14 @@ class EstimatorState {
         };
         this.serviceConfigs = {};
         this.preferences = {
-            wantsVideo: false
+            wantsVideo: false,
+            showAllAddons: false // New: Tracks "View More Add-ons" toggle state
         };
         this.activeTab = null;
+        
+        // Tracking for Applied Bundles & Savings
+        this.appliedBundles = []; // New: Stores detected bundles from calculator
+        this.lastCalculation = null; // New: Stores the full result of the last calculation
         
         // Cached calculations
         this._cachedQuote = null;
@@ -51,8 +56,13 @@ class EstimatorState {
         this._cachedQuote = null;
         this._cachedSummary = null;
         
-        // BEST PRACTICE: Disabled auto-save to prevent persistent service selection
-        // this.saveToStorage(); 
+        // Re-run calculation whenever state changes to keep bundles in sync
+        if (window.calculator && this.selectedServices.length > 0) {
+            this.lastCalculation = window.calculator.calculateTotalQuote(this);
+            this.appliedBundles = this.lastCalculation.appliedBundles || [];
+        } else {
+            this.appliedBundles = [];
+        }
         
         // Notify observers
         this.notifyObservers();
@@ -60,6 +70,9 @@ class EstimatorState {
         // Log for debugging
         if (window.DEBUG_MODE) {
             console.log('State updated:', this.getSnapshot());
+            if (this.appliedBundles.length > 0) {
+                console.log('Active Bundles Detected:', this.appliedBundles);
+            }
         }
     }
 
@@ -74,10 +87,13 @@ class EstimatorState {
         } else {
             // Add service with default configuration
             this.selectedServices.push(serviceId);
+            
+            // Get default capabilities from CONFIG for this service
+            const defaultCaps = CONFIG.SERVICES[serviceId]?.capabilities || [];
+            
             this.serviceConfigs[serviceId] = {
-                capabilities: [],
-                serviceLevel: null,
-                serviceLevel: null,
+                capabilities: [...defaultCaps],
+                serviceLevel: 'premium', // Default to Premium as per "Most Popular" best practice
                 addons: []
             };
         }
@@ -85,6 +101,8 @@ class EstimatorState {
         // Update active tab if needed
         if (this.activeTab && !this.selectedServices.includes(this.activeTab)) {
             this.activeTab = this.selectedServices[0] || null;
+        } else if (!this.activeTab && this.selectedServices.length > 0) {
+            this.activeTab = this.selectedServices[0];
         }
         
         this.update({});
@@ -92,9 +110,14 @@ class EstimatorState {
 
     updateServiceConfig(serviceId, configUpdates) {
         if (!this.serviceConfigs[serviceId]) {
-            this.serviceConfigs[serviceId] = {};
+            this.serviceConfigs[serviceId] = {
+                capabilities: [],
+                serviceLevel: 'premium',
+                addons: []
+            };
         }
         
+        // Handle array merges (capabilities/addons) or value overwrites
         Object.assign(this.serviceConfigs[serviceId], configUpdates);
         this.update({});
     }
@@ -106,57 +129,26 @@ class EstimatorState {
                 return this.selectedServices.length > 0;
             
             case 'scope':
-                return this.commonConfig.industry && this.commonConfig.scale;
+                // Check if Industry and Business Scale are selected
+                return !!(this.commonConfig.industry && this.commonConfig.scale);
             
             case 'details':
+                // Ensure all selected services have a service level chosen
                 return this.selectedServices.every(serviceId => 
                     this.serviceConfigs[serviceId]?.serviceLevel
                 );
             
+            case 'review':
+                // Step 4 (Summary) is always valid if they reached it
+                return true;
+                
+            case 'contact':
+                // Contact form validation is handled by GHL Integration / DOM
+                return true;
+            
             default:
                 return true;
         }
-    }
-
-    // ==================== PERSISTENCE (OPTIONAL/UNUSED) ====================
-    saveToStorage() {
-        try {
-            const saveableState = {
-                currentStep: this.currentStep,
-                selectedServices: this.selectedServices,
-                commonConfig: this.commonConfig,
-                serviceConfigs: this.serviceConfigs,
-                preferences: this.preferences,
-                activeTab: this.activeTab,
-                timestamp: Date.now()
-            };
-            
-            localStorage.setItem('ghlEstimatorState', JSON.stringify(saveableState));
-        } catch (error) {
-            console.warn('Failed to save state to localStorage:', error);
-        }
-    }
-
-    loadFromStorage() {
-        try {
-            const saved = JSON.parse(localStorage.getItem('ghlEstimatorState'));
-            if (saved) {
-                if (Date.now() - (saved.timestamp || 0) < 24 * 60 * 60 * 1000) {
-                    this.currentStep = 'services'; 
-                    this.selectedServices = saved.selectedServices || [];
-                    this.commonConfig = saved.commonConfig || { industry: null, scale: null };
-                    this.serviceConfigs = saved.serviceConfigs || {};
-                    this.preferences = saved.preferences || { wantsVideo: false };
-                    this.activeTab = null;
-                }
-            }
-        } catch (error) {
-            console.warn('Failed to load state from localStorage:', error);
-        }
-    }
-
-    clearStorage() {
-        localStorage.removeItem('ghlEstimatorState');
     }
 
     // ==================== UTILITIES ====================
@@ -165,12 +157,17 @@ class EstimatorState {
         this.selectedServices = [];
         this.commonConfig = { industry: null, scale: null };
         this.serviceConfigs = {};
-        this.preferences = { wantsVideo: false };
+        this.preferences = { 
+            wantsVideo: false,
+            showAllAddons: false 
+        };
         this.activeTab = null;
+        this.appliedBundles = [];
+        this.lastCalculation = null;
         this._cachedQuote = null;
         this._cachedSummary = null;
         
-        this.clearStorage();
+        if (typeof this.clearStorage === 'function') this.clearStorage();
         this.update({});
     }
 
@@ -179,9 +176,10 @@ class EstimatorState {
             currentStep: this.currentStep,
             selectedServices: [...this.selectedServices],
             commonConfig: { ...this.commonConfig },
-            serviceConfigs: { ...this.serviceConfigs },
+            serviceConfigs: JSON.parse(JSON.stringify(this.serviceConfigs)),
             preferences: { ...this.preferences },
-            activeTab: this.activeTab
+            activeTab: this.activeTab,
+            appliedBundles: [...this.appliedBundles]
         };
     }
 
@@ -198,7 +196,15 @@ class EstimatorState {
 
     get progressPercentage() {
         const currentStepIndex = CONFIG.STEPS.findIndex(s => s.id === this.currentStep);
+        if (currentStepIndex === -1) return 0;
         return (currentStepIndex / (CONFIG.STEPS.length - 1)) * 100;
+    }
+
+    // ==================== PERSISTENCE (OPTIONAL) ====================
+    clearStorage() {
+        try {
+            localStorage.removeItem('ghlEstimatorState');
+        } catch (e) {}
     }
 }
 

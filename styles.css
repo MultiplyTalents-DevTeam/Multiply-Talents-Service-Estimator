@@ -1222,6 +1222,189 @@ body {
 }
 
 /* ========================================
+   NEW FEATURES - INTEGRATED
+======================================== */
+
+/* --- Roadmap Styles (Step 5) --- */
+.roadmap-box {
+    background: rgba(1, 57, 81, 0.03);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px dashed var(--accent-gold);
+}
+
+.roadmap-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+
+.roadmap-steps-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.roadmap-item {
+    flex: 1;
+    text-align: center;
+    position: relative;
+}
+
+.roadmap-number {
+    width: 28px;
+    height: 28px;
+    background: var(--accent-primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0 auto 0.5rem;
+}
+
+.roadmap-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-primary);
+}
+
+.roadmap-text span {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+/* --- Psychological Pricing UI --- */
+.price-anchor-note {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid var(--accent-gold);
+}
+
+.agency-price {
+    text-decoration: line-through;
+    color: #dc3545; /* Red for high anchor */
+    font-weight: 600;
+}
+
+.our-price {
+    color: #28a745; /* Green for your price */
+    font-weight: 700;
+}
+
+.bundle-highlight-box {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+    color: #856404;
+    line-height: 1.4;
+    animation: fadeInSlide 0.4s ease-out;
+}
+
+@keyframes fadeInSlide {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Expert Recommendations --- */
+.config-option.popular-choice {
+    border-color: var(--accent-gold);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Override for capability popular badge */
+.config-option .popular-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--accent-gold);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-bottom-left-radius: 8px;
+    text-transform: uppercase;
+    top: -0.625rem; /* Align with existing popular badge position */
+    left: auto; /* Override left positioning */
+    transform: none; /* Remove transform */
+    width: auto;
+    height: auto;
+}
+
+.recommendation-tag {
+    display: inline-block;
+    background: var(--accent-primary);
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+/* --- Premium Form Layout --- */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.primary-cta-btn {
+    background: linear-gradient(135deg, var(--accent-primary) 0%, #025a81 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 1.25rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(1, 57, 81, 0.2);
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+}
+
+.primary-cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(1, 57, 81, 0.3);
+}
+
+.btn-outline-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.btn-outline-sm:hover {
+    border-color: var(--accent-gold);
+    color: var(--accent-primary);
+}
+
+/* ========================================
    RESPONSIVE
 ======================================== */
 @media (max-width: 1023px) {
@@ -1330,6 +1513,34 @@ body {
 
     .estimator-sidebar {
         order: -1;
+    }
+
+    /* Responsive adjustments for new features */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .roadmap-steps-container {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .roadmap-item {
+        display: flex;
+        align-items: center;
+        text-align: left;
+        gap: 1rem;
+    }
+
+    .roadmap-number {
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .price-anchor-note {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 }
 

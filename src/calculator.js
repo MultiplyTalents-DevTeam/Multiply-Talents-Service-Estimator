@@ -46,51 +46,35 @@ class Calculator {
             }
         }
 
-        // Apply scale multiplier and adder
+        // Apply scale adder (Updated from Multiplier to Fixed Adder based on Page 2)
         if (commonConfig.scale) {
             const scale = this.config.BUSINESS_SCALES.find(s => s.id === commonConfig.scale);
-            if (scale) {
-                // Apply multiplier
-                if (scale.multiplier > 1) {
-                    const multiplierIncrease = Math.round(subtotal * (scale.multiplier - 1));
-                    subtotal += multiplierIncrease;
-                    breakdown.push({
-                        type: 'scale_multiplier',
-                        id: scale.id,
-                        name: `${scale.name} Multiplier`,
-                        amount: multiplierIncrease
-                    });
-                }
-                
-                // Add fixed adder
-                if (scale.adder > 0) {
-                    subtotal += scale.adder;
-                    breakdown.push({
-                        type: 'scale_adder',
-                        id: scale.id,
-                        name: `${scale.name} Adder`,
-                        amount: scale.adder
-                    });
-                }
-            }
-        }
-
-        // Apply service level multiplier
-        if (serviceConfig.serviceLevel) {
-            const level = this.config.SERVICE_LEVELS.find(l => l.id === serviceConfig.serviceLevel);
-            if (level?.multiplier > 1) {
-                const increase = Math.round(subtotal * (level.multiplier - 1));
-                subtotal += increase;
+            if (scale && scale.adder > 0) {
+                subtotal += scale.adder;
                 breakdown.push({
-                    type: 'service_level',
-                    id: level.id,
-                    name: `${level.name} Level`,
-                    amount: increase
+                    type: 'scale_adder',
+                    id: scale.id,
+                    name: `${scale.name} Adjustment`,
+                    amount: scale.adder
                 });
             }
         }
 
-        // Add addons
+        // Apply service level adder (Updated from Multiplier to Fixed Adder based on Page 3)
+        if (serviceConfig.serviceLevel) {
+            const level = this.config.SERVICE_LEVELS.find(l => l.id === serviceConfig.serviceLevel);
+            if (level && level.adder > 0) {
+                subtotal += level.adder;
+                breakdown.push({
+                    type: 'service_level',
+                    id: level.id,
+                    name: `${level.name} Level`,
+                    amount: level.adder
+                });
+            }
+        }
+
+        // Add technical addons
         (serviceConfig.addons || []).forEach(addonId => {
             const addon = this.config.ADDONS.find(a => a.id === addonId);
             if (addon) {
@@ -116,10 +100,12 @@ class Calculator {
         
         const services = [];
         let subtotal = 0;
+        let allSelectedItems = [];
 
         selectedServices.forEach(serviceId => {
             const service = this.config.SERVICES[serviceId];
-            const serviceCalc = this.calculateServiceQuote(serviceId, serviceConfigs[serviceId] || {}, commonConfig);
+            const config = serviceConfigs[serviceId] || {};
+            const serviceCalc = this.calculateServiceQuote(serviceId, config, commonConfig);
             
             services.push({
                 serviceId,
@@ -129,25 +115,65 @@ class Calculator {
             });
             
             subtotal += serviceCalc.subtotal;
+
+            // Collect all individual items for bundle detection
+            if (config.capabilities) allSelectedItems.push(...config.capabilities);
+            if (config.addons) allSelectedItems.push(...config.addons);
         });
 
-        // Apply bundle discount
-        let discount = 0;
-        if (selectedServices.length > 1) {
-            discount = Math.round(subtotal * this.config.PRICING_RULES.bundleDiscount);
+        // 1. Detect Bundles and calculate savings
+        const bundleResults = this.detectBundles(allSelectedItems);
+        const bundleDiscountTotal = bundleResults.reduce((acc, b) => acc + b.savings, 0);
+
+        // 2. Standard multi-service discount (if no specific bundles found)
+        let multiServiceDiscount = 0;
+        if (bundleDiscountTotal === 0 && selectedServices.length > 1) {
+            multiServiceDiscount = Math.round(subtotal * (this.config.PRICING_RULES.bundleDiscount || 0.05));
         }
 
-        const total = Math.max(0, subtotal - discount);
+        const totalDiscount = bundleDiscountTotal + multiServiceDiscount;
+        const finalTotal = Math.max(0, subtotal - totalDiscount);
+        
+        // 3. Western Agency Price Anchor Calculation
+        const westernAgencyPrice = Math.round(finalTotal * this.config.PRICING_RULES.westernAgencyMultiplier);
+
         const hasMonthly = services.some(s => s.isMonthly);
 
         return {
             services,
             subtotal,
-            discount,
-            total,
+            appliedBundles: bundleResults,
+            totalDiscount,
+            finalTotal,
+            westernAgencyPrice,
             hasMonthly,
             timestamp: new Date().toISOString()
         };
+    }
+
+    /**
+     * Logical Bundle Detection
+     * Checks if selected items qualify for specific "Growth Packages"
+     */
+    detectBundles(selectedItemIds) {
+        const activeBundles = [];
+        if (!this.config.BUNDLES) return activeBundles;
+
+        this.config.BUNDLES.forEach(bundle => {
+            // Check if every item in the bundle is present in the user's selection
+            const hasAllItems = bundle.included.every(itemId => selectedItemIds.includes(itemId));
+            
+            if (hasAllItems) {
+                activeBundles.push({
+                    id: bundle.id,
+                    name: bundle.name,
+                    savings: bundle.savings,
+                    pitch: bundle.pitch
+                });
+            }
+        });
+
+        return activeBundles;
     }
 
     // ==================== FORMATTING UTILITIES ====================
@@ -160,31 +186,9 @@ class Calculator {
         return amount.toLocaleString('en-US');
     }
 
-    generateInvoiceNumber() {
-        const timestamp = Date.now().toString().slice(-6);
-        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        return `EST-${timestamp}${random}`;
-    }
-
-    // ==================== VALIDATION CALCULATIONS ====================
-    getServiceCompletion(serviceId, serviceConfig) {
-        let completed = 0;
-        let total = 3; // capabilities, service level, addons
-        
-        if (serviceConfig.capabilities?.length > 0) completed++;
-        if (serviceConfig.serviceLevel) completed++;
-        if (serviceConfig.addons?.length > 0) completed++;
-        
-        return {
-            completed,
-            total,
-            percentage: Math.round((completed / total) * 100)
-        };
-    }
-
     // ==================== ESTIMATE HELPERS ====================
     estimateTimeline(serviceIds, serviceLevel) {
-        const baseDays = 5;
+        const baseDays = 7; // Updated to 7 days based on GHL Setup pitch
         const serviceCount = serviceIds.length;
         
         let timeline = baseDays;
@@ -194,9 +198,8 @@ class Calculator {
         if (serviceLevel === 'premium') timeline -= 1;
         
         // Adjust for multiple services
-        if (serviceCount > 1) timeline += Math.floor(serviceCount / 2);
+        if (serviceCount > 1) timeline += Math.floor(serviceCount * 1.5);
         
-        // Minimum timeline
         return Math.max(2, timeline);
     }
 

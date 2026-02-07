@@ -6,142 +6,215 @@
 
 const CONFIG = {
     // ==================== SERVICE DEFINITIONS ====================
+    // Updated based on [cite: 3]
     SERVICES: {
         new_ghl_setup: {
             id: 'new_ghl_setup',
             name: 'New GHL Setup',
-            description: 'Complete GoHighLevel setup from scratch with all automations and workflows',
+            description: 'Get a professional, turnkey foundation in 7 days without the DIY headache.',
             icon: '🚀',
-            basePrice: 297,
+            basePrice: 497,
             category: 'ghl',
-            // Step 2 capabilities for this service
-            capabilities: ['funnels', 'crm', 'inbox', 'calendar']
+            capabilities: ['funnels', 'crm', 'workflow_automation']
         },
         platform_migration: {
             id: 'platform_migration',
             name: 'Platform Migration',
-            description: 'Seamless migration from your current platform to GoHighLevel',
+            description: 'Stop overpaying for 5 different tools. We’ll move your entire business to GHL seamlessly.',
             icon: '🔄',
             basePrice: 697,
             category: 'ghl',
-            capabilities: ['data_migration', 'workflow_transfer', 'training']
+            capabilities: ['data_migration', 'workflow_transfer']
         },
         fix_optimize: {
             id: 'fix_optimize',
             name: 'Fix & Optimize',
-            description: 'Audit and optimize your existing GHL setup for maximum performance',
+            description: 'Is your GHL messy? We’ll audit your tech stack and plug the leaks in your automation.',
             icon: '🔧',
-            basePrice: 197,
+            basePrice: 297,
             category: 'ghl',
             capabilities: ['audit', 'optimization', 'bug_fixes']
         },
         monthly_management: {
             id: 'monthly_management',
             name: 'Monthly Management',
-            description: 'Ongoing GHL management, updates, and support',
+            description: 'Your own dedicated GHL expert for less than a part-time VA’s salary.',
             icon: '👥',
             basePrice: 997,
             category: 'ghl',
             isMonthly: true,
+            recommendedBadge: true, // [cite: 46]
             capabilities: ['campaign_launches', 'tech_support', 'reporting']
         }
     },
 
-    // ==================== CAPABILITIES (Step 2) ====================
+    // ==================== FEATURES (Step 2) ====================
+    // Updated pricing and pitches based on [cite: 14]
     CAPABILITIES: {
-        funnels: { id: 'funnels', name: 'Funnels & Websites', price: 197, icon: '🎯' },
-        crm: { id: 'crm', name: 'CRM & Pipelines', price: 0, icon: '📊' },
-        inbox: { id: 'inbox', name: 'Unified Inbox', price: 47, icon: '📧' },
-        calendar: { id: 'calendar', name: 'Calendar System', price: 97, icon: '📅' },
-        data_migration: { id: 'data_migration', name: 'Data Migration', price: 297, icon: '📤' },
-        campaign_launches: { id: 'campaign_launches', name: 'Campaign Launches', price: 147, icon: '📢' },
-        reporting: { id: 'reporting', name: 'Weekly Reporting', price: 97, icon: '📈' }
+        funnels: { 
+            id: 'funnels', 
+            name: 'Funnels & Websites', 
+            price: 297, 
+            icon: '🎯',
+            pitch: 'Your 24/7 digital salesperson. We build high-converting, mobile-optimized funnels designed to turn cold traffic into loyal customers.',
+            isPopularBundlePart: true // [cite: 15]
+        },
+        crm: { 
+            id: 'crm', 
+            name: 'CRM & Pipelines', 
+            price: 197, 
+            icon: '📊',
+            pitch: 'Stop losing leads in the cracks. We’ll map out your entire sales journey so you always know exactly who to call and when to close.',
+            isPopularBundlePart: true 
+        },
+        workflow_automation: { 
+            id: 'workflow_automation', 
+            name: 'Workflow Automation', 
+            price: 247, 
+            icon: '🤖',
+            pitch: 'Put your business on autopilot. We’ll automate your follow-ups, lead nurturing, and tasks, saving you 10+ hours of manual work every week.',
+            isPopularBundlePart: true 
+        },
+        reputation_management: { 
+            id: 'reputation_management', 
+            name: 'Reputation Management', 
+            price: 147, 
+            icon: '⭐',
+            pitch: 'Dominate local search. We’ll automate your review requests to turn every happy customer into a 5-star Google rating that attracts new business.'
+        },
+        social_media_planner: { 
+            id: 'social_media_planner', 
+            name: 'Social Media Planner', 
+            price: 147, 
+            icon: '📅',
+            pitch: 'One dashboard, all your socials. Schedule a month’s worth of content in minutes and keep your brand active without the daily hassle.'
+        },
+        calendar: { 
+            id: 'calendar', 
+            name: 'Calendar System', 
+            price: 97, 
+            icon: '🗓️',
+            pitch: "Say goodbye to 'When are you free?' emails. A professional, automated booking system that syncs with your phone and fills your schedule."
+        }
     },
 
     // ==================== INDUSTRIES (Step 3) ====================
+    // Updated list based on [cite: 5, 6, 7, 8]
     INDUSTRIES: [
-        { id: 'real_estate', name: 'Real Estate', icon: '🏠', multiplier: 1.2 },
+        { id: 'home_services', name: 'Home Services/Contractors', icon: '🏠', multiplier: 1.0 },
+        { id: 'ecommerce', name: 'E-commerce', icon: '🛒', multiplier: 1.0 },
+        { id: 'elearning_coaches', name: 'E-learning/Coaches', icon: '🎓', multiplier: 1.0 },
         { id: 'medical_dental', name: 'Medical/Dental', icon: '🏥', multiplier: 1.3 },
-        { id: 'coaching', name: 'Coaching/Course Creator', icon: '💪', multiplier: 1.0 },
         { id: 'agency_saas', name: 'Agency/SaaS', icon: '⚖️', multiplier: 1.1 },
-        { id: 'local_service', name: 'Local Service Business', icon: '🔧', multiplier: 1.0 },
         { id: 'other', name: 'Other', icon: '🏢', multiplier: 1.0 }
     ],
 
     // ==================== BUSINESS SCALES (Step 4) ====================
+    // Updated to use fixed price adders based on [cite: 10, 11]
     BUSINESS_SCALES: [
         { 
             id: 'solopreneur', 
             name: 'Solopreneur', 
-            description: 'Under 1,000 contacts', 
+            description: 'Perfect for those starting or staying lean.', 
             icon: '🚀', 
-            multiplier: 1.0, 
             adder: 0 
         },
         { 
             id: 'growing', 
-            name: 'Growing Business', 
-            description: '1,000 - 10,000 contacts', 
-            icon: '🏢', 
-            multiplier: 1.1, 
-            adder: 197 
+            name: 'Growing Biz', 
+            description: 'Built to scale with your increasing lead flow.', 
+            icon: '📈', 
+            adder: 300 
         },
         { 
             id: 'scale', 
             name: 'Scale/Agency', 
-            description: '10,000 - 50,000 contacts', 
-            icon: '🏭', 
-            multiplier: 1.2, 
-            adder: 497 
+            description: 'Infrastructure designed for high-volume stability.', 
+            icon: '🏢', 
+            adder: 700 
         },
         { 
             id: 'enterprise', 
             name: 'Enterprise', 
-            description: '50,000+ contacts or Multi-Location', 
+            description: 'White-glove architecture for massive operations.', 
             icon: '🌆', 
-            multiplier: 1.3, 
-            adder: 997 
+            adder: 1500 
         }
     ],
 
     // ==================== SERVICE LEVELS (Step 5) ====================
+    // Updated based on [cite: 17, 18, 19, 20]
     SERVICE_LEVELS: [
         {
             id: 'standard',
-            name: 'Standard',
-            description: 'DIY Hybrid Setup',
-            features: ['We install the snapshot', 'You handle copy and DNS', 'Email support', 'Standard timeline'],
-            multiplier: 1.0
+            name: 'Standard (DIY Hybrid)',
+            description: 'We build it, you run it.',
+            features: ['Basic snapshot install', 'Standard timeline'],
+            adder: 0
         },
         {
             id: 'premium',
-            name: 'Premium',
-            description: 'Done-With-You',
-            features: ['Full setup included', '2 revisions included', 'Standard copywriting', 'Priority support', 'Follow-up included'],
-            multiplier: 1.4,
+            name: 'Premium (Done-With-You)',
+            description: 'We build it and train your team to be pros.',
+            features: ['Full setup', 'Priority support', 'Training included'],
+            adder: 497,
             popular: true
         },
         {
             id: 'luxury',
-            name: 'Luxury',
-            description: 'White Glove Service',
-            features: ['Custom CSS design', 'Advanced API integrations', 'Premium copywriting', 'Dedicated support', 'Rush delivery', 'Priority access'],
-            multiplier: 2.0
+            name: 'Luxury (White Glove)',
+            description: 'Total peace of mind. We handle every single click.',
+            features: ['Custom design', 'Advanced automation', 'Priority 48h support'],
+            adder: 997
         }
     ],
 
     // ==================== ADDONS (Step 6) ====================
+    // Fully updated technical add-ons based on [cite: 22]
     ADDONS: [
-        { id: 'content_pack', name: 'Content Pack', description: '5 Email + 5 SMS Templates', icon: '📝', price: 97 },
-        { id: 'integration', name: '3rd Party Integration', description: 'Zapier/Stripe/Shopify', icon: '🔗', price: 97 },
-        { id: 'training', name: 'Training Session', description: '1-hour Zoom training', icon: '🎓', price: 147 },
-        { id: 'rush', name: 'Rush Delivery', description: '48-hour turnaround', icon: '⚡', price: 150 }
+        { id: 'api_integration', name: 'Custom API/Webhook', description: 'We make the impossible possible. Custom bridges for your data.', icon: '🔗', price: 497 },
+        { id: 'snapshot_creation', name: 'Snapshot Creation', description: 'Package your setup into a deployable asset you can sell.', icon: '📸', price: 297 },
+        { id: 'rush_delivery', name: 'Rush Delivery (48h)', description: 'We clear our schedule to launch your project yesterday.', icon: '⚡', price: 150 },
+        { id: 'zoom_handoff', name: 'Live Zoom Handoff', description: '1-on-1 walkthrough to ensure you are 100% confident.', icon: '🎓', price: 147 },
+        { id: 'hipaa', name: 'Advanced HIPAA Compliance', description: 'Configure GHL for strict medical security standards.', icon: '🛡️', price: 497 },
+        { id: 'ab_testing', name: 'A/B Split Testing Setup', description: 'Find the winning design that brings in the most leads.', icon: '🧪', price: 197 },
+        { id: 'custom_css', name: 'Custom CSS/Branding', description: 'High-end, bespoke brand aesthetic that builds instant trust.', icon: '🎨', price: 247 },
+        { id: 'email_audit', name: 'Email Deliverability Audit', description: 'Ensure your emails land in the inbox, not the spam folder.', icon: '📧', price: 197 }
     ],
 
-    // ==================== PRICING RULES ====================
+    // ==================== GROWTH PACKAGES (BUNDLES) ====================
+    // New logic for Page 4 [cite: 32]
+    BUNDLES: [
+        {
+            id: 'authority_bundle',
+            name: 'The Authority Bundle',
+            included: ['reputation_management', 'social_media_planner', 'custom_css'],
+            bundlePrice: 447,
+            savings: 94,
+            pitch: 'Everything you need to look like the market leader and dominate local search.'
+        },
+        {
+            id: 'scale_safety_bundle',
+            name: 'The Scale & Safety Bundle',
+            included: ['api_integration', 'snapshot_creation', 'hipaa'],
+            bundlePrice: 997,
+            savings: 294,
+            pitch: 'Built for high-volume agencies and healthcare providers needing enterprise-grade security.'
+        },
+        {
+            id: 'performance_pro',
+            name: 'The Performance Pro',
+            included: ['ab_testing', 'email_audit', 'zoom_handoff'],
+            bundlePrice: 447,
+            savings: 94,
+            pitch: 'Optimize your ROI. We ensure emails hit the inbox and funnels convert.'
+        }
+    ],
+
+    // ==================== PRICING RULES & ANCHORING ====================
     PRICING_RULES: {
-        bundleDiscount: 0.05, // 5% for multiple services
         currency: 'USD',
+        westernAgencyMultiplier: 2.78, // Used to calculate Estimated US Agency Price [cite: 37]
         formatOptions: {
             style: 'currency',
             currency: 'USD',
@@ -158,8 +231,6 @@ const CONFIG = {
         { id: 'contact', label: 'Contact', number: 5 }
     ]
 };
-
-
 
 // Make available globally
 window.CONFIG = CONFIG;

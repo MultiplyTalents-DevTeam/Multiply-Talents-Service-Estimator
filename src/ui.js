@@ -12,6 +12,13 @@ class UIHandler {
         // DOM cache
         this.elements = {};
         this.cacheElements();
+        
+        // Subscribe to state changes
+        this.state.subscribe(() => this.updateUI());
+        
+        // Initialize UI
+        this.bindEvents();
+        this.updateUI();
     }
 
     // ==================== ELEMENT CACHING ====================
@@ -22,6 +29,13 @@ class UIHandler {
             progressSteps: document.getElementById('progress-steps'),
             servicesGrid: document.getElementById('services-grid'),
             summaryContent: document.getElementById('summary-content'),
+            
+            // Step containers
+            stepServices: document.getElementById('step-services'),
+            stepScope: document.getElementById('step-scope'),
+            stepDetails: document.getElementById('step-details'),
+            stepReview: document.getElementById('step-review'),
+            stepContact: document.getElementById('step-contact'),
             
             // Buttons
             servicesContinue: document.getElementById('services-continue'),
@@ -36,14 +50,67 @@ class UIHandler {
             // Forms
             quoteForm: document.getElementById('quote-form'),
             videoOption: document.getElementById('video-option'),
-            videoCheckbox: document.getElementById('video-checkbox')
+            videoCheckbox: document.getElementById('video-checkbox'),
+            
+            // Bundles display
+            bundlesContainer: document.getElementById('bundles-container'),
+            
+            // View more addons toggle
+            viewMoreAddons: document.getElementById('view-more-addons')
         };
+    }
+
+    // ==================== EVENT BINDING ====================
+    bindEvents() {
+        // Navigation buttons
+        if (this.elements.servicesContinue) {
+            this.elements.servicesContinue.onclick = () => this.goToStep('scope');
+        }
+        if (this.elements.scopeBack) {
+            this.elements.scopeBack.onclick = () => this.goToStep('services');
+        }
+        if (this.elements.scopeContinue) {
+            this.elements.scopeContinue.onclick = () => this.goToStep('details');
+        }
+        if (this.elements.detailsBack) {
+            this.elements.detailsBack.onclick = () => this.goToStep('scope');
+        }
+        if (this.elements.detailsContinue) {
+            this.elements.detailsContinue.onclick = () => this.goToStep('review');
+        }
+        if (this.elements.reviewBack) {
+            this.elements.reviewBack.onclick = () => this.goToStep('details');
+        }
+        if (this.elements.reviewContinue) {
+            this.elements.reviewContinue.onclick = () => this.goToStep('contact');
+        }
+        if (this.elements.contactBack) {
+            this.elements.contactBack.onclick = () => this.goToStep('review');
+        }
+        
+        // Video option toggle
+        if (this.elements.videoOption) {
+            this.elements.videoOption.onclick = () => this.toggleVideoOption();
+        }
+        
+        // View more addons toggle
+        if (this.elements.viewMoreAddons) {
+            this.elements.viewMoreAddons.onclick = () => this.toggleAllAddons();
+        }
+        
+        // Reset form on page refresh
+        window.addEventListener('beforeunload', () => {
+            this.state.reset();
+        });
     }
 
     // ==================== MASTER UPDATE FUNCTION ====================
     updateUI() {
         // Update progress steps
         this.renderProgressSteps();
+        
+        // Show/hide step containers
+        this.showCurrentStep();
         
         // Update step-specific content
         switch(this.state.currentStep) {
@@ -69,12 +136,66 @@ class UIHandler {
         
         // Update navigation buttons
         this.updateNavigation();
+        
+        // Update bundles display
+        this.renderBundles();
+    }
+
+    // ==================== STEP NAVIGATION ====================
+    goToStep(stepId) {
+        if (this.state.validateStep(stepId) || stepId === 'services' || stepId === 'review') {
+            this.state.update({ currentStep: stepId });
+        } else {
+            this.showValidationError(stepId);
+        }
+    }
+
+    showCurrentStep() {
+        // Hide all steps first
+        document.querySelectorAll('.step-content').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Show current step
+        const currentStepEl = document.getElementById(`step-${this.state.currentStep}`);
+        if (currentStepEl) {
+            currentStepEl.classList.add('active');
+        }
+    }
+
+    showValidationError(stepId) {
+        let message = '';
+        switch(stepId) {
+            case 'scope':
+                message = 'Please select both your industry and business scale before continuing.';
+                break;
+            case 'details':
+                message = 'Please configure service levels for all selected services before continuing.';
+                break;
+        }
+        
+        if (message) {
+            // Create or update validation message
+            let errorEl = document.querySelector('.validation-error');
+            if (!errorEl) {
+                errorEl = document.createElement('div');
+                errorEl.className = 'validation-error';
+                document.querySelector('.step-content.active').appendChild(errorEl);
+            }
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
     }
 
     // ==================== PROGRESS STEPS ====================
     renderProgressSteps() {
         const container = this.elements.progressSteps;
-        const progressLine = document.getElementById('progress-line-active');
+        const progressLine = this.elements.progressLineActive;
         if (!container || !progressLine) return;
         
         // Clear existing steps
@@ -105,6 +226,12 @@ class UIHandler {
                 <span class="${labelClass}">${step.label}</span>
             `;
             
+            // Make completed steps clickable
+            if (index < currentStepIndex) {
+                stepElement.style.cursor = 'pointer';
+                stepElement.onclick = () => this.goToStep(step.id);
+            }
+            
             container.appendChild(stepElement);
         });
         
@@ -122,13 +249,15 @@ class UIHandler {
         
         Object.values(this.config.SERVICES).forEach(service => {
             const isSelected = this.state.selectedServices.includes(service.id);
+            const hasRecommendedBadge = service.recommendedBadge;
             const serviceCard = document.createElement('div');
-            serviceCard.className = `service-card ${isSelected ? 'selected' : ''}`;
+            serviceCard.className = `service-card ${isSelected ? 'selected' : ''} ${hasRecommendedBadge ? 'recommended' : ''}`;
             serviceCard.onclick = () => this.state.toggleService(service.id);
 
             serviceCard.innerHTML = `
                 <div class="service-icon">${service.icon}</div>
                 <div class="service-content">
+                    ${hasRecommendedBadge ? '<div class="recommended-badge">🔥 Most Popular</div>' : ''}
                     <h3>${service.name}</h3>
                     <p>${service.description}</p>
                 </div>
@@ -229,6 +358,7 @@ class UIHandler {
                 <span class="option-icon">${scale.icon}</span>
                 <div class="option-title">${scale.name}</div>
                 <div class="option-description">${scale.description}</div>
+                ${scale.adder > 0 ? `<div class="option-price">+$${scale.adder}</div>` : ''}
             `;
 
             container.appendChild(option);
@@ -375,7 +505,7 @@ class UIHandler {
             
             const isSelected = (config.capabilities || []).includes(capId);
             const option = document.createElement('div');
-            option.className = `config-option ${isSelected ? 'selected' : ''}`;
+            option.className = `config-option ${isSelected ? 'selected' : ''} ${capability.isPopularBundlePart ? 'popular-bundle-part' : ''}`;
             option.dataset.capabilityId = capId;
             option.onclick = () => {
                 const newConfig = { ...config };
@@ -394,8 +524,9 @@ class UIHandler {
             option.innerHTML = `
                 <span class="option-icon">${capability.icon}</span>
                 <div class="option-title">${capability.name}</div>
-                <div class="option-description">${capability.description || ''}</div>
+                <div class="option-description">${capability.pitch || ''}</div>
                 ${capability.price > 0 ? `<div class="option-price">+$${capability.price}</div>` : ''}
+                ${capability.isPopularBundlePart ? `<div class="bundle-indicator">Popular Bundle Item</div>` : ''}
             `;
 
             container.appendChild(option);
@@ -419,7 +550,7 @@ class UIHandler {
             };
 
             option.innerHTML = `
-                ${level.popular ? '<div class="popular-badge">Popular</div>' : ''}
+                ${level.popular ? '<div class="popular-badge">Most Popular</div>' : ''}
                 <div class="option-title">${level.name}</div>
                 <div class="option-description">${level.description}</div>
                 <div style="margin-top: 0.75rem;">
@@ -430,6 +561,7 @@ class UIHandler {
                         </div>
                     `).join('')}
                 </div>
+                ${level.adder > 0 ? `<div class="option-price" style="margin-top: 1rem;">+$${level.adder}</div>` : ''}
             `;
 
             container.appendChild(option);
@@ -442,7 +574,13 @@ class UIHandler {
         
         const config = this.state.serviceConfigs[serviceId] || {};
         
-        this.config.ADDONS.forEach(addon => {
+        // Determine which addons to show (all if toggled, otherwise first 4)
+        const showAll = this.state.preferences.showAllAddons;
+        const addonsToShow = showAll ? this.config.ADDONS : this.config.ADDONS.slice(0, 4);
+        
+        container.innerHTML = '';
+        
+        addonsToShow.forEach(addon => {
             const isSelected = (config.addons || []).includes(addon.id);
             const option = document.createElement('div');
             option.className = `config-option ${isSelected ? 'selected' : ''}`;
@@ -470,6 +608,28 @@ class UIHandler {
 
             container.appendChild(option);
         });
+        
+        // Add view more toggle if not showing all
+        if (!showAll && this.config.ADDONS.length > 4) {
+            const viewMoreOption = document.createElement('div');
+            viewMoreOption.className = 'config-option view-more-option';
+            viewMoreOption.onclick = () => {
+                this.state.update({
+                    preferences: {
+                        ...this.state.preferences,
+                        showAllAddons: true
+                    }
+                });
+            };
+            
+            viewMoreOption.innerHTML = `
+                <span class="option-icon">➕</span>
+                <div class="option-title">View More Add-ons</div>
+                <div class="option-description">See ${this.config.ADDONS.length - 4} more technical enhancements</div>
+            `;
+            
+            container.appendChild(viewMoreOption);
+        }
     }
 
     activateTab(serviceId) {
@@ -500,7 +660,11 @@ class UIHandler {
         if (!body) return;
         
         const quote = this.calculator.calculateTotalQuote(this.state);
-        const invoiceNumber = this.calculator.generateInvoiceNumber();
+        const timeline = this.calculator.estimateTimeline(
+            this.state.selectedServices,
+            this.getHighestServiceLevel()
+        );
+        const deliveryDate = this.calculator.estimateDeliveryDate(timeline);
         
         body.innerHTML = `
             <div class="help-banner">
@@ -509,96 +673,185 @@ class UIHandler {
                     <p><strong>Almost there!</strong> Review your selections below. You can go back to make changes anytime.</p>
                 </div>
             </div>
-            <div id="review-content"></div>
+            
+            <div class="invoice-card">
+                ${this.renderInvoiceHeader()}
+                ${this.renderInvoiceScope()}
+                ${this.renderInvoiceServices(quote)}
+                ${this.renderInvoiceTotals(quote)}
+                ${this.renderTimelineInfo(timeline, deliveryDate)}
+            </div>
         `;
-        
-        this.renderInvoice(quote, invoiceNumber);
     }
 
-    renderInvoice(quote, invoiceNumber) {
-        const container = document.getElementById('review-content');
-        if (!container) return;
+    getHighestServiceLevel() {
+        let highestLevel = 'standard';
+        Object.values(this.state.serviceConfigs).forEach(config => {
+            if (config.serviceLevel === 'luxury') highestLevel = 'luxury';
+            else if (config.serviceLevel === 'premium' && highestLevel !== 'luxury') highestLevel = 'premium';
+        });
+        return highestLevel;
+    }
+
+    renderInvoiceHeader() {
+        return `
+            <div class="invoice-header">
+                <div class="invoice-brand">
+                    <h1>MultiplyTalents</h1>
+                    <p>Professional Service Estimate</p>
+                </div>
+                <div class="invoice-number">
+                    <h2>Estimate #</h2>
+                    <p>${Date.now().toString().slice(-8)}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    renderInvoiceScope() {
+        const industry = this.config.INDUSTRIES.find(i => i.id === this.state.commonConfig.industry);
+        const scale = this.config.BUSINESS_SCALES.find(s => s.id === this.state.commonConfig.scale);
         
-        const hasMonthly = quote.services.some(s => s.isMonthly);
-        const hasDiscount = quote.services.length > 1;
-        const discountAmount = quote.discount;
-        const finalTotal = quote.total;
-        
-        container.innerHTML = `
-            <div class="invoice-card">
-                <div class="invoice-header">
-                    <div class="invoice-brand">
-                        <h1>MultiplyTalents</h1>
-                        <p>Professional Service Estimate</p>
-                    </div>
-                    <div class="invoice-number">
-                        <h2>Estimate #</h2>
-                        <p>${invoiceNumber}</p>
-                    </div>
-                </div>
-
-                <div class="invoice-section">
-                    <h3>Project Scope</h3>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-                        <div style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
-                            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 0.25rem;">Industry</div>
-                            <div style="font-weight: 600; color: var(--text-primary);">
-                                ${this.config.INDUSTRIES.find(i => i.id === this.state.commonConfig.industry)?.name || 'Not selected'}
-                            </div>
-                        </div>
-                        <div style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
-                            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 0.25rem;">Business Scale</div>
-                            <div style="font-weight: 600; color: var(--text-primary);">
-                                ${this.config.BUSINESS_SCALES.find(s => s.id === this.state.commonConfig.scale)?.name || 'Not selected'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="invoice-section">
-                    <h3>Selected Services</h3>
-                    ${quote.services.map(s => `
-                        <div class="invoice-line-item">
-                            <div class="line-item-details">
-                                <h4>${s.serviceName}</h4>
-                                <p>${this.config.SERVICES[s.serviceId].description}</p>
-                                ${s.breakdown && s.breakdown.length ? `
-                                    <div class="invoice-breakdown">
-                                        ${s.breakdown.map(item => `
-                                            <div class="breakdown-item">
-                                                <span>• ${item.name}</span>
-                                                <span>$${item.amount.toLocaleString()}</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
-                            </div>
-                            <div class="line-item-price">
-                                $${s.subtotal.toLocaleString()}${s.isMonthly ? '<span style="font-size:0.75rem; font-weight:500; color:var(--text-muted);">/mo</span>' : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-
-                <div class="invoice-totals">
-                    <div class="total-row">
-                        <span class="total-label">Subtotal</span>
-                        <span class="total-value">$${quote.subtotal.toLocaleString()}</span>
-                    </div>
-                    ${hasDiscount ? `
-                        <div class="total-row">
-                            <span class="total-label" style="color: var(--accent-success);">Bundle Discount (5%)</span>
-                            <span class="total-value" style="color: var(--accent-success);">-$${discountAmount.toLocaleString()}</span>
+        return `
+            <div class="invoice-section">
+                <h3>Project Scope</h3>
+                <div class="scope-grid">
+                    ${industry ? `
+                        <div class="scope-item">
+                            <div class="scope-label">🏢 Industry</div>
+                            <div class="scope-value">${industry.name}</div>
+                            ${industry.multiplier > 1 ? `<div class="scope-note">${Math.round((industry.multiplier - 1) * 100)}% complexity adjustment</div>` : ''}
                         </div>
                     ` : ''}
-                    <div class="total-row">
-                        <div>
-                            <div class="total-label grand">Estimated Total</div>
-                            <div style="font-size:.8125rem; color:var(--text-muted); margin-top:.25rem;">${hasMonthly ? 'Monthly investment' : 'One-time investment'}</div>
+                    ${scale ? `
+                        <div class="scope-item">
+                            <div class="scope-label">📊 Business Scale</div>
+                            <div class="scope-value">${scale.name}</div>
+                            ${scale.adder > 0 ? `<div class="scope-note">+$${scale.adder} scale adjustment</div>` : ''}
                         </div>
-                        <div style="text-align:right;">
-                            <div class="total-value grand count-animation">$${finalTotal.toLocaleString()}</div>
-                            ${hasMonthly ? `<div style="font-size:.875rem; color:var(--text-muted);">/month</div>` : ''}
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    renderInvoiceServices(quote) {
+        return `
+            <div class="invoice-section">
+                <h3>Selected Services</h3>
+                ${quote.services.map(service => this.renderInvoiceService(service)).join('')}
+            </div>
+        `;
+    }
+
+    renderInvoiceService(service) {
+        const serviceConfig = this.config.SERVICES[service.serviceId];
+        const serviceLevel = this.config.SERVICE_LEVELS.find(l => l.id === this.state.serviceConfigs[service.serviceId]?.serviceLevel);
+        
+        return `
+            <div class="invoice-service">
+                <div class="service-header">
+                    <div class="service-title">
+                        <span class="service-icon">${serviceConfig.icon}</span>
+                        <h4>${service.serviceName}</h4>
+                        ${service.isMonthly ? '<span class="monthly-badge">Monthly</span>' : ''}
+                    </div>
+                    <div class="service-price">
+                        $${this.calculator.formatNumber(service.subtotal)}
+                        ${service.isMonthly ? '<span class="price-period">/month</span>' : ''}
+                    </div>
+                </div>
+                
+                ${service.breakdown.length > 0 ? `
+                    <div class="service-breakdown">
+                        ${service.breakdown.map(item => `
+                            <div class="breakdown-item">
+                                <span class="breakdown-name">• ${item.name}</span>
+                                <span class="breakdown-price">+$${this.calculator.formatNumber(item.amount)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${serviceLevel ? `
+                    <div class="service-level">
+                        <div class="level-name">${serviceLevel.name} Service Level</div>
+                        ${serviceLevel.adder > 0 ? `<div class="level-price">+$${serviceLevel.adder}</div>` : ''}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    renderInvoiceTotals(quote) {
+        const hasMonthly = quote.hasMonthly;
+        const hasDiscount = quote.totalDiscount > 0;
+        
+        return `
+            <div class="invoice-totals">
+                <div class="total-row">
+                    <span class="total-label">Subtotal</span>
+                    <span class="total-value">$${this.calculator.formatNumber(quote.subtotal)}</span>
+                </div>
+                
+                ${hasDiscount ? `
+                    <div class="total-row discount-row">
+                        <span class="total-label">
+                            ${quote.appliedBundles.length > 0 ? 'Bundle Savings' : 'Multi-Service Discount'}
+                        </span>
+                        <span class="total-value discount">-$${this.calculator.formatNumber(quote.totalDiscount)}</span>
+                    </div>
+                    
+                    ${quote.appliedBundles.length > 0 ? `
+                        <div class="bundle-savings">
+                            <div class="bundle-savings-title">✨ Applied Growth Packages:</div>
+                            ${quote.appliedBundles.map(bundle => `
+                                <div class="bundle-item">
+                                    <span>${bundle.name}</span>
+                                    <span class="bundle-savings-amount">Saved $${bundle.savings}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                ` : ''}
+                
+                <div class="total-row grand-total">
+                    <div class="grand-total-left">
+                        <div class="total-label grand">Estimated Total</div>
+                        <div class="total-period">${hasMonthly ? 'Monthly investment' : 'One-time investment'}</div>
+                    </div>
+                    <div class="grand-total-right">
+                        <div class="total-value grand count-animation">$${this.calculator.formatNumber(quote.finalTotal)}</div>
+                        ${hasMonthly ? '<div class="total-period">/month</div>' : ''}
+                    </div>
+                </div>
+                
+                <div class="price-anchor">
+                    <div class="anchor-label">💎 Western Agency Value</div>
+                    <div class="anchor-value">$${this.calculator.formatNumber(quote.westernAgencyPrice)}</div>
+                    <div class="anchor-note">Estimated price from a typical US-based agency</div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTimelineInfo(timeline, deliveryDate) {
+        return `
+            <div class="timeline-section">
+                <h3>📅 Estimated Timeline</h3>
+                <div class="timeline-content">
+                    <div class="timeline-item">
+                        <div class="timeline-icon">⏱️</div>
+                        <div>
+                            <div class="timeline-label">Project Duration</div>
+                            <div class="timeline-value">${timeline} business days</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon">📅</div>
+                        <div>
+                            <div class="timeline-label">Estimated Delivery</div>
+                            <div class="timeline-value">${deliveryDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                         </div>
                     </div>
                 </div>
@@ -613,6 +866,40 @@ class UIHandler {
             this.elements.videoOption.classList.toggle('selected', this.state.preferences.wantsVideo);
             this.elements.videoCheckbox.classList.toggle('checked', this.state.preferences.wantsVideo);
         }
+        
+        // Update the form summary
+        this.renderContactSummary();
+    }
+
+    renderContactSummary() {
+        const summaryEl = document.getElementById('contact-summary');
+        if (!summaryEl) return;
+        
+        const quote = this.calculator.calculateTotalQuote(this.state);
+        
+        summaryEl.innerHTML = `
+            <div class="contact-summary-card">
+                <h3>Your Estimate Summary</h3>
+                <div class="summary-item">
+                    <span class="summary-label">Total Services:</span>
+                    <span class="summary-value">${this.state.selectedServices.length}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Investment:</span>
+                    <span class="summary-value">$${this.calculator.formatNumber(quote.finalTotal)}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Billing:</span>
+                    <span class="summary-value">${quote.hasMonthly ? 'Monthly' : 'One-time'}</span>
+                </div>
+                ${this.state.appliedBundles.length > 0 ? `
+                    <div class="summary-item">
+                        <span class="summary-label">Bundle Savings:</span>
+                        <span class="summary-value discount">$${this.calculator.formatNumber(quote.totalDiscount)}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
     }
 
     // ==================== SUMMARY PANEL ====================
@@ -622,15 +909,12 @@ class UIHandler {
         
         const quote = this.calculator.calculateTotalQuote(this.state);
         const hasRecurring = this.state.hasMonthlyService;
-        const hasDiscount = this.state.hasMultipleServices;
-        const discountAmount = hasDiscount ? Math.round(quote.subtotal * this.config.PRICING_RULES.bundleDiscount) : 0;
-        const finalTotal = quote.total;
-
+        
         const servicesHtml = this.state.selectedServices.length === 0
-            ? `<p style="font-size:0.9375rem; font-style:italic; color: var(--text-muted);">No services selected</p>`
+            ? `<p class="empty-summary">No services selected</p>`
             : `
                 <div class="services-list">
-                    <div style="display:flex; align-items:center; gap:.75rem; font-size:.875rem; margin-bottom:1rem; color: var(--text-secondary);">
+                    <div class="services-header">
                         <span>🧩</span>
                         <span>Services (${this.state.selectedServices.length})</span>
                     </div>
@@ -642,7 +926,7 @@ class UIHandler {
                                     <span>${s.icon}</span>
                                     <span>${s.name}</span>
                                 </span>
-                                <span style="font-weight:700;">$${(s.basePrice || 0).toLocaleString()}${s.isMonthly ? '<span style="font-size:0.75rem;font-weight:400;color:var(--text-muted);">/mo</span>' : ''}</span>
+                                <span class="service-price">$${(s.basePrice || 0).toLocaleString()}${s.isMonthly ? '<span class="price-period">/mo</span>' : ''}</span>
                             </div>
                         `;
                     }).join('')}
@@ -654,13 +938,13 @@ class UIHandler {
                 ${this.state.commonConfig.industry ? `
                     <div class="detail-item">
                         <span class="detail-label">🏢 Industry</span>
-                        <span style="color: var(--text-primary);">${this.config.INDUSTRIES.find(i => i.id === this.state.commonConfig.industry)?.name}</span>
+                        <span class="detail-value">${this.config.INDUSTRIES.find(i => i.id === this.state.commonConfig.industry)?.name}</span>
                     </div>
                 ` : ''}
                 ${this.state.commonConfig.scale ? `
                     <div class="detail-item">
                         <span class="detail-label">📊 Scale</span>
-                        <span style="color: var(--text-primary);">${this.config.BUSINESS_SCALES.find(s => s.id === this.state.commonConfig.scale)?.name}</span>
+                        <span class="detail-value">${this.config.BUSINESS_SCALES.find(s => s.id === this.state.commonConfig.scale)?.name}</span>
                     </div>
                 ` : ''}
             </div>
@@ -670,54 +954,103 @@ class UIHandler {
             ${servicesHtml}
             ${scopeHtml}
             <div class="pricing-section">
-                <div class="detail-item" style="margin-bottom:0.75rem;">
-                    <span style="color: var(--text-secondary);">${hasRecurring ? 'Starting Monthly Rate' : 'Starting From'}</span>
-                    <span style="color: var(--text-primary); font-weight: 600;">$${quote.subtotal.toLocaleString()}</span>
+                <div class="pricing-item">
+                    <span class="pricing-label">${hasRecurring ? 'Starting Monthly' : 'Starting From'}</span>
+                    <span class="pricing-value">$${this.calculator.formatNumber(quote.subtotal)}</span>
                 </div>
-                ${hasDiscount ? `
-                    <div class="detail-item" style="color: var(--accent-success); margin-bottom:0.75rem;">
-                        <span>Bundle Discount (5%)</span>
-                        <span style="font-weight: 600;">-$${discountAmount.toLocaleString()}</span>
+                ${quote.totalDiscount > 0 ? `
+                    <div class="pricing-item discount">
+                        <span class="pricing-label">Bundle Savings</span>
+                        <span class="pricing-value">-$${this.calculator.formatNumber(quote.totalDiscount)}</span>
                     </div>
                 ` : ''}
             </div>
             <div class="total-section">
                 <div class="total-display">
-                    <div>
-                        <div style="font-weight:700; color: var(--text-primary);">Base Estimate</div>
-                        <div style="font-size:.8125rem; color: var(--text-muted); margin-top:.25rem;">Configure for final pricing</div>
+                    <div class="total-left">
+                        <div class="total-label">Base Estimate</div>
+                        <div class="total-subtitle">Configure for final pricing</div>
                     </div>
-                    <div style="text-align:right;">
-                        <div class="total-amount count-animation">$${finalTotal.toLocaleString()}</div>
-                        ${hasRecurring ? `<div class="total-period">/month</div>` : ``}
+                    <div class="total-right">
+                        <div class="total-amount count-animation">$${this.calculator.formatNumber(quote.finalTotal)}</div>
+                        ${hasRecurring ? `<div class="total-period">/month</div>` : ''}
                     </div>
                 </div>
             </div>
         `;
     }
 
+    // ==================== BUNDLES DISPLAY ====================
+    renderBundles() {
+        const container = this.elements.bundlesContainer;
+        if (!container) return;
+        
+        // Only show bundles container if there are applied bundles
+        if (this.state.appliedBundles.length > 0) {
+            container.style.display = 'block';
+            
+            container.innerHTML = `
+                <div class="bundles-header">
+                    <span>✨</span>
+                    <span>Applied Growth Packages</span>
+                </div>
+                ${this.state.appliedBundles.map(bundle => `
+                    <div class="bundle-card">
+                        <div class="bundle-name">${bundle.name}</div>
+                        <div class="bundle-pitch">${bundle.pitch}</div>
+                        <div class="bundle-savings">
+                            <span>You Saved:</span>
+                            <span class="savings-amount">$${bundle.savings}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    // ==================== PREFERENCE HANDLERS ====================
+    toggleVideoOption() {
+        this.state.update({
+            preferences: {
+                ...this.state.preferences,
+                wantsVideo: !this.state.preferences.wantsVideo
+            }
+        });
+    }
+
+    toggleAllAddons() {
+        this.state.update({
+            preferences: {
+                ...this.state.preferences,
+                showAllAddons: !this.state.preferences.showAllAddons
+            }
+        });
+    }
+
     // ==================== NAVIGATION ====================
     updateNavigation() {
         // Update all navigation button states
+        if (this.elements.servicesContinue) {
+            this.elements.servicesContinue.disabled = this.state.selectedServices.length === 0;
+        }
+        
         if (this.elements.scopeContinue) {
             this.elements.scopeContinue.disabled = 
                 !this.state.commonConfig.industry || !this.state.commonConfig.scale;
         }
-    }
-
-    showStep(stepId) {
-        // Hide all steps
-        document.querySelectorAll('.step-content').forEach(el => {
-            el.classList.remove('active');
-        });
         
-        // Show requested step
-        const stepElement = document.getElementById(`step-${stepId}`);
-        if (stepElement) {
-            stepElement.classList.add('active');
+        if (this.elements.detailsContinue) {
+            const allServicesConfigured = this.state.selectedServices.every(serviceId => 
+                this.state.serviceConfigs[serviceId]?.serviceLevel
+            );
+            this.elements.detailsContinue.disabled = !allServicesConfigured;
         }
     }
 }
 
-// Create singleton instance
-window.uiHandler = new UIHandler();
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    window.uiHandler = new UIHandler();
+});
