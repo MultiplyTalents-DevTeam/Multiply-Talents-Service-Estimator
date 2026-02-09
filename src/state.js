@@ -93,7 +93,7 @@ class EstimatorState {
             
             this.serviceConfigs[serviceId] = {
                 capabilities: [...defaultCaps],
-                serviceLevel: 'premium', // Default to Premium as per "Most Popular" best practice
+                serviceLevel: 'standard', // Default to Standard
                 addons: []
             };
         }

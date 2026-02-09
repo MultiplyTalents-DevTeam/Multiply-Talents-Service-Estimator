@@ -13,8 +13,17 @@ const CONFIG = {
             name: 'New GHL Setup',
             description: 'Get a professional, turnkey foundation in 7 days without the DIY headache.',
             icon: '🚀',
-            basePrice: 497,
+
+            // BACKWARD COMPAT (do not remove): keep a single number for legacy UIs
+            // Using the "max" of the range is safest for any existing code that expects a number.
+            basePrice: 297,
+
+            // NEW: Range pricing for estimation (min/max)
+            basePriceRange: { min: 97, max: 297 },
+
             category: 'ghl',
+
+            // Keep as-is (capabilities still appear selectable; calculator/ui will mark some as Included)
             capabilities: ['funnels', 'crm', 'workflow_automation']
         },
         platform_migration: {
@@ -22,7 +31,13 @@ const CONFIG = {
             name: 'Platform Migration',
             description: 'Stop overpaying for 5 different tools. We’ll move your entire business to GHL seamlessly.',
             icon: '🔄',
-            basePrice: 697,
+
+            // BACKWARD COMPAT
+            basePrice: 997,
+
+            // NEW: Range pricing for estimation (min/max)
+            basePriceRange: { min: 697, max: 997 },
+
             category: 'ghl',
             capabilities: ['data_migration', 'workflow_transfer']
         },
@@ -31,7 +46,13 @@ const CONFIG = {
             name: 'Fix & Optimize',
             description: 'Is your GHL messy? We’ll audit your tech stack and plug the leaks in your automation.',
             icon: '🔧',
-            basePrice: 297,
+
+            // BACKWARD COMPAT
+            basePrice: 497,
+
+            // NEW: Range pricing for estimation (min/max)
+            basePriceRange: { min: 297, max: 497 },
+
             category: 'ghl',
             capabilities: ['audit', 'optimization', 'bug_fixes']
         },
@@ -40,7 +61,13 @@ const CONFIG = {
             name: 'Monthly Management',
             description: 'Your own dedicated GHL expert for less than a part-time VA’s salary.',
             icon: '👥',
+
+            // BACKWARD COMPAT
             basePrice: 997,
+
+            // NEW: Optional range (kept same min/max by default, can be adjusted later)
+            basePriceRange: { min: 997, max: 997 },
+
             category: 'ghl',
             isMonthly: true,
             recommendedBadge: true, // [cite: 46]
@@ -54,7 +81,10 @@ const CONFIG = {
         funnels: { 
             id: 'funnels', 
             name: 'Funnels & Websites', 
+            // BACKWARD COMPAT: keep numeric price
             price: 297, 
+            // NEW: Optional range (kept same min/max)
+            priceRange: { min: 297, max: 297 },
             icon: '🎯',
             pitch: 'Your 24/7 digital salesperson. We build high-converting, mobile-optimized funnels designed to turn cold traffic into loyal customers.',
             isPopularBundlePart: true // [cite: 15]
@@ -63,6 +93,7 @@ const CONFIG = {
             id: 'crm', 
             name: 'CRM & Pipelines', 
             price: 197, 
+            priceRange: { min: 197, max: 197 },
             icon: '📊',
             pitch: 'Stop losing leads in the cracks. We’ll map out your entire sales journey so you always know exactly who to call and when to close.',
             isPopularBundlePart: true 
@@ -71,6 +102,7 @@ const CONFIG = {
             id: 'workflow_automation', 
             name: 'Workflow Automation', 
             price: 247, 
+            priceRange: { min: 247, max: 247 },
             icon: '🤖',
             pitch: 'Put your business on autopilot. We’ll automate your follow-ups, lead nurturing, and tasks, saving you 10+ hours of manual work every week.',
             isPopularBundlePart: true 
@@ -79,6 +111,7 @@ const CONFIG = {
             id: 'reputation_management', 
             name: 'Reputation Management', 
             price: 147, 
+            priceRange: { min: 147, max: 147 },
             icon: '⭐',
             pitch: 'Dominate local search. We’ll automate your review requests to turn every happy customer into a 5-star Google rating that attracts new business.'
         },
@@ -86,6 +119,7 @@ const CONFIG = {
             id: 'social_media_planner', 
             name: 'Social Media Planner', 
             price: 147, 
+            priceRange: { min: 147, max: 147 },
             icon: '📅',
             pitch: 'One dashboard, all your socials. Schedule a month’s worth of content in minutes and keep your brand active without the daily hassle.'
         },
@@ -93,6 +127,7 @@ const CONFIG = {
             id: 'calendar', 
             name: 'Calendar System', 
             price: 97, 
+            priceRange: { min: 97, max: 97 },
             icon: '🗓️',
             pitch: "Say goodbye to 'When are you free?' emails. A professional, automated booking system that syncs with your phone and fills your schedule."
         }
@@ -172,14 +207,17 @@ const CONFIG = {
     // ==================== ADDONS (Step 6) ====================
     // Fully updated technical add-ons based on [cite: 22]
     ADDONS: [
-        { id: 'api_integration', name: 'Custom API/Webhook', description: 'We make the impossible possible. Custom bridges for your data.', icon: '🔗', price: 497 },
-        { id: 'snapshot_creation', name: 'Snapshot Creation', description: 'Package your setup into a deployable asset you can sell.', icon: '📸', price: 297 },
-        { id: 'rush_delivery', name: 'Rush Delivery (48h)', description: 'We clear our schedule to launch your project yesterday.', icon: '⚡', price: 150 },
-        { id: 'zoom_handoff', name: 'Live Zoom Handoff', description: '1-on-1 walkthrough to ensure you are 100% confident.', icon: '🎓', price: 147 },
-        { id: 'hipaa', name: 'Advanced HIPAA Compliance', description: 'Configure GHL for strict medical security standards.', icon: '🛡️', price: 497 },
-        { id: 'ab_testing', name: 'A/B Split Testing Setup', description: 'Find the winning design that brings in the most leads.', icon: '🧪', price: 197 },
-        { id: 'custom_css', name: 'Custom CSS/Branding', description: 'High-end, bespoke brand aesthetic that builds instant trust.', icon: '🎨', price: 247 },
-        { id: 'email_audit', name: 'Email Deliverability Audit', description: 'Ensure your emails land in the inbox, not the spam folder.', icon: '📧', price: 197 }
+        { id: 'api_integration', name: 'Custom API/Webhook', description: 'We make the impossible possible. Custom bridges for your data.', icon: '🔗', price: 497, priceRange: { min: 497, max: 497 } },
+        { id: 'snapshot_creation', name: 'Snapshot Creation', description: 'Package your setup into a deployable asset you can sell.', icon: '📸', price: 297, priceRange: { min: 297, max: 297 } },
+
+        // UPDATED per your request: rush delivery should be +300
+        { id: 'rush_delivery', name: 'Rush Delivery (48h)', description: 'We clear our schedule to launch your project yesterday.', icon: '⚡', price: 300, priceRange: { min: 300, max: 300 } },
+
+        { id: 'zoom_handoff', name: 'Live Zoom Handoff', description: '1-on-1 walkthrough to ensure you are 100% confident.', icon: '🎓', price: 147, priceRange: { min: 147, max: 147 } },
+        { id: 'hipaa', name: 'Advanced HIPAA Compliance', description: 'Configure GHL for strict medical security standards.', icon: '🛡️', price: 497, priceRange: { min: 497, max: 497 } },
+        { id: 'ab_testing', name: 'A/B Split Testing Setup', description: 'Find the winning design that brings in the most leads.', icon: '🧪', price: 197, priceRange: { min: 197, max: 197 } },
+        { id: 'custom_css', name: 'Custom CSS/Branding', description: 'High-end, bespoke brand aesthetic that builds instant trust.', icon: '🎨', price: 247, priceRange: { min: 247, max: 247 } },
+        { id: 'email_audit', name: 'Email Deliverability Audit', description: 'Ensure your emails land in the inbox, not the spam folder.', icon: '📧', price: 197, priceRange: { min: 197, max: 197 } }
     ],
 
     // ==================== GROWTH PACKAGES (BUNDLES) ====================
@@ -214,7 +252,23 @@ const CONFIG = {
     // ==================== PRICING RULES & ANCHORING ====================
     PRICING_RULES: {
         currency: 'USD',
-        westernAgencyMultiplier: 2.78, // Used to calculate Estimated US Agency Price [cite: 37]
+
+        // BACKWARD COMPAT: keep multiplier (older calculator may use this)
+        // Adjusted from 2.78 to a lower anchor (you want ~+1000 vs your estimate).
+        westernAgencyMultiplier: 1.6,
+
+        // NEW: Range-based western anchor rule (calculator can prefer this)
+        // Example: if your estimate is 1000–2000, western becomes ~3000–4000.
+        westernAgencyRangeAdder: { min: 2000, max: 2000 },
+
+        // NEW: Monthly management adder (+127) when monthly_management is selected
+        monthlyManagementAdder: 127,
+
+        // NEW: Capabilities included (no extra price) when specific service selected
+        includedCapabilitiesByService: {
+            new_ghl_setup: ['funnels', 'crm', 'workflow_automation']
+        },
+
         formatOptions: {
             style: 'currency',
             currency: 'USD',

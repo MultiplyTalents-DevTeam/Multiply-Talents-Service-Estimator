@@ -1,5 +1,5 @@
 /**
- * UI HANDLERS MODULE - FIXED VERSION
+ * UI HANDLERS MODULE - FIXED VERSION (RANGE PRICING + CONSISTENT SUMMARY/REVIEW)
  * All DOM manipulation and rendering logic
  */
 
@@ -8,14 +8,14 @@ class UIHandler {
         this.state = estimatorState;
         this.calculator = calculator;
         this.config = CONFIG;
-        
+
         // DOM cache
         this.elements = {};
         this.cacheElements();
-        
+
         // Subscribe to state changes
         this.state.subscribe(() => this.updateUI());
-        
+
         // Initialize UI
         this.bindEvents();
         this.updateUI();
@@ -29,14 +29,14 @@ class UIHandler {
             progressSteps: document.getElementById('progress-steps'),
             servicesGrid: document.getElementById('services-grid'),
             summaryContent: document.getElementById('summary-content'),
-            
+
             // Step containers
             stepServices: document.getElementById('step-services'),
             stepScope: document.getElementById('step-scope'),
             stepDetails: document.getElementById('step-details'),
             stepReview: document.getElementById('step-review'),
             stepContact: document.getElementById('step-contact'),
-            
+
             // Buttons
             servicesContinue: document.getElementById('services-continue'),
             scopeBack: document.getElementById('scope-back'),
@@ -46,15 +46,15 @@ class UIHandler {
             reviewBack: document.getElementById('review-back'),
             reviewContinue: document.getElementById('review-continue'),
             contactBack: document.getElementById('contact-back'),
-            
+
             // Forms
             quoteForm: document.getElementById('quote-form'),
             videoOption: document.getElementById('video-option'),
             videoCheckbox: document.getElementById('video-checkbox'),
-            
+
             // Bundles display
             bundlesContainer: document.getElementById('bundles-container'),
-            
+
             // View more addons toggle
             viewMoreAddons: document.getElementById('view-more-addons')
         };
@@ -87,17 +87,17 @@ class UIHandler {
         if (this.elements.contactBack) {
             this.elements.contactBack.onclick = () => this.goToStep('review');
         }
-        
+
         // Video option toggle
         if (this.elements.videoOption) {
             this.elements.videoOption.onclick = () => this.toggleVideoOption();
         }
-        
+
         // View more addons toggle
         if (this.elements.viewMoreAddons) {
             this.elements.viewMoreAddons.onclick = () => this.toggleAllAddons();
         }
-        
+
         // Reset form on page refresh
         window.addEventListener('beforeunload', () => {
             this.state.reset();
@@ -108,12 +108,12 @@ class UIHandler {
     updateUI() {
         // Update progress steps
         this.renderProgressSteps();
-        
+
         // Show/hide step containers
         this.showCurrentStep();
-        
+
         // Update step-specific content
-        switch(this.state.currentStep) {
+        switch (this.state.currentStep) {
             case 'services':
                 this.renderServices();
                 break;
@@ -130,15 +130,40 @@ class UIHandler {
                 this.renderContact();
                 break;
         }
-        
+
         // Always update summary panel
         this.renderSummary();
-        
+
         // Update navigation buttons
         this.updateNavigation();
-        
+
         // Update bundles display
         this.renderBundles();
+    }
+
+    // ==================== RANGE DISPLAY HELPERS ====================
+    formatRangeOrNumber(rangeObj, numberFallback = 0) {
+        // Prefer calculator.formatCurrencyRange if available (from your updated calculator.js)
+        if (this.calculator && typeof this.calculator.formatCurrencyRange === 'function' && rangeObj) {
+            return this.calculator.formatCurrencyRange(rangeObj);
+        }
+        // Fallback: show number
+        return `$${this.calculator.formatNumber(typeof numberFallback === 'number' ? numberFallback : 0)}`;
+    }
+
+    getServiceBaseDisplay(service) {
+        // Show service base price RANGE if present
+        if (service && service.basePriceRange && typeof this.calculator.formatCurrencyRange === 'function') {
+            return this.calculator.formatCurrencyRange(service.basePriceRange);
+        }
+        // fallback to basePrice
+        return `$${this.calculator.formatNumber(service.basePrice || 0)}`;
+    }
+
+    isCapabilityIncludedForService(serviceId, capId) {
+        const map = this.config.PRICING_RULES?.includedCapabilitiesByService || {};
+        const included = map[serviceId] || [];
+        return included.includes(capId);
     }
 
     // ==================== STEP NAVIGATION ====================
@@ -155,7 +180,7 @@ class UIHandler {
         document.querySelectorAll('.step-content').forEach(el => {
             el.classList.remove('active');
         });
-        
+
         // Show current step
         const currentStepEl = document.getElementById(`step-${this.state.currentStep}`);
         if (currentStepEl) {
@@ -165,7 +190,7 @@ class UIHandler {
 
     showValidationError(stepId) {
         let message = '';
-        switch(stepId) {
+        switch (stepId) {
             case 'scope':
                 message = 'Please select both your industry and business scale before continuing.';
                 break;
@@ -173,7 +198,7 @@ class UIHandler {
                 message = 'Please configure service levels for all selected services before continuing.';
                 break;
         }
-        
+
         if (message) {
             // Create or update validation message
             let errorEl = document.querySelector('.validation-error');
@@ -184,7 +209,7 @@ class UIHandler {
             }
             errorEl.textContent = message;
             errorEl.style.display = 'block';
-            
+
             // Auto-hide after 5 seconds
             setTimeout(() => {
                 errorEl.style.display = 'none';
@@ -197,44 +222,44 @@ class UIHandler {
         const container = this.elements.progressSteps;
         const progressLine = this.elements.progressLineActive;
         if (!container || !progressLine) return;
-        
+
         // Clear existing steps
         container.querySelectorAll('.progress-step').forEach(el => el.remove());
-        
+
         // Get current step index
         const currentStepIndex = this.config.STEPS.findIndex(s => s.id === this.state.currentStep);
-        
+
         // Create step indicators
         this.config.STEPS.forEach((step, index) => {
             const stepElement = document.createElement('div');
             stepElement.className = 'progress-step';
-            
+
             let circleClass = 'step-circle';
             let labelClass = 'step-label';
-            
+
             if (index < currentStepIndex) {
                 circleClass += ' completed';
             } else if (index === currentStepIndex) {
                 circleClass += ' active';
                 labelClass += ' active';
             }
-            
+
             stepElement.innerHTML = `
                 <div class="${circleClass}">
                     ${index < currentStepIndex ? '✓' : step.number}
                 </div>
                 <span class="${labelClass}">${step.label}</span>
             `;
-            
+
             // Make completed steps clickable
             if (index < currentStepIndex) {
                 stepElement.style.cursor = 'pointer';
                 stepElement.onclick = () => this.goToStep(step.id);
             }
-            
+
             container.appendChild(stepElement);
         });
-        
+
         // Update progress line
         const progressPercent = (currentStepIndex / (this.config.STEPS.length - 1)) * 100;
         progressLine.style.width = `${progressPercent}%`;
@@ -244,9 +269,9 @@ class UIHandler {
     renderServices() {
         const container = this.elements.servicesGrid;
         if (!container) return;
-        
+
         container.innerHTML = '';
-        
+
         Object.values(this.config.SERVICES).forEach(service => {
             const isSelected = this.state.selectedServices.includes(service.id);
             const hasRecommendedBadge = service.recommendedBadge;
@@ -254,12 +279,16 @@ class UIHandler {
             serviceCard.className = `service-card ${isSelected ? 'selected' : ''} ${hasRecommendedBadge ? 'recommended' : ''}`;
             serviceCard.onclick = () => this.state.toggleService(service.id);
 
+            // NEW: show range badge (small) but keep structure stable
+            const baseRangeText = this.getServiceBaseDisplay(service);
+
             serviceCard.innerHTML = `
                 <div class="service-icon">${service.icon}</div>
                 <div class="service-content">
                     ${hasRecommendedBadge ? '<div class="recommended-badge">🔥 Most Popular</div>' : ''}
                     <h3>${service.name}</h3>
                     <p>${service.description}</p>
+                    <div class="service-range-hint">${baseRangeText}${service.isMonthly ? '<span class="price-period">/month</span>' : ''}</div>
                 </div>
                 <div class="selection-indicator">
                     <div class="selection-dot"></div>
@@ -278,7 +307,7 @@ class UIHandler {
     renderScope() {
         const body = document.getElementById('step-scope-body');
         if (!body) return;
-        
+
         // Render the body content
         body.innerHTML = `
             <div class="help-banner">
@@ -300,7 +329,7 @@ class UIHandler {
                 <div class="config-grid" id="scale-grid"></div>
             </div>
         `;
-        
+
         // Now render the grids
         this.renderIndustryGrid();
         this.renderScaleGrid();
@@ -310,9 +339,9 @@ class UIHandler {
     renderIndustryGrid() {
         const container = document.getElementById('industry-grid');
         if (!container) return;
-        
+
         container.innerHTML = '';
-        
+
         this.config.INDUSTRIES.forEach(industry => {
             const isSelected = this.state.commonConfig.industry === industry.id;
             const option = document.createElement('div');
@@ -338,9 +367,9 @@ class UIHandler {
     renderScaleGrid() {
         const container = document.getElementById('scale-grid');
         if (!container) return;
-        
+
         container.innerHTML = '';
-        
+
         this.config.BUSINESS_SCALES.forEach(scale => {
             const isSelected = this.state.commonConfig.scale === scale.id;
             const option = document.createElement('div');
@@ -376,7 +405,7 @@ class UIHandler {
     renderDetails() {
         const body = document.getElementById('step-details-body');
         if (!body) return;
-        
+
         body.innerHTML = `
             <div class="help-banner" style="margin: 0; border-radius: 0;">
                 <span class="help-banner-icon">🎯</span>
@@ -384,14 +413,14 @@ class UIHandler {
                     <p>Use the tabs below to configure each service. Your progress is saved automatically as you go.</p>
                 </div>
             </div>
-            
+
             <div class="service-tabs" id="service-tabs"></div>
             <div id="tab-contents"></div>
         `;
-        
+
         this.renderServiceTabs();
         this.renderTabContents();
-        
+
         // Activate first tab if none active
         if (!this.state.activeTab || !this.state.selectedServices.includes(this.state.activeTab)) {
             this.state.activeTab = this.state.selectedServices[0];
@@ -402,15 +431,14 @@ class UIHandler {
     renderServiceTabs() {
         const container = document.getElementById('service-tabs');
         if (!container) return;
-        
+
         container.innerHTML = '';
-        
+
         this.state.selectedServices.forEach(serviceId => {
             const service = this.config.SERVICES[serviceId];
-            const config = this.state.serviceConfigs[serviceId] || {};
             const completionCount = this.getServiceCompletionCount(serviceId);
             const totalSteps = 3;
-            
+
             const tab = document.createElement('button');
             tab.className = 'service-tab';
             tab.dataset.serviceId = serviceId;
@@ -438,16 +466,15 @@ class UIHandler {
     renderTabContents() {
         const container = document.getElementById('tab-contents');
         if (!container) return;
-        
+
         container.innerHTML = '';
 
         this.state.selectedServices.forEach(serviceId => {
             const service = this.config.SERVICES[serviceId];
-            const config = this.state.serviceConfigs[serviceId] || {};
             const completionCount = this.getServiceCompletionCount(serviceId);
             const totalSteps = 3;
             const progressPercent = (completionCount / totalSteps) * 100;
-            
+
             const tabContent = document.createElement('div');
             tabContent.className = 'tab-content';
             tabContent.dataset.serviceId = serviceId;
@@ -492,40 +519,54 @@ class UIHandler {
     renderCapabilities(serviceId) {
         const container = document.getElementById(`capabilities-${serviceId}`);
         if (!container) return;
-        
+
         const config = this.state.serviceConfigs[serviceId] || {};
         const service = this.config.SERVICES[serviceId];
-        
+
         // Get capabilities for this specific service
         const serviceCapabilities = service.capabilities || [];
-        
+
+        container.innerHTML = '';
+
         serviceCapabilities.forEach(capId => {
             const capability = this.config.CAPABILITIES[capId];
             if (!capability) return;
-            
+
             const isSelected = (config.capabilities || []).includes(capId);
+
+            // NEW: included logic for New GHL Setup bundle items
+            const isIncluded = this.isCapabilityIncludedForService(serviceId, capId);
+
             const option = document.createElement('div');
-            option.className = `config-option ${isSelected ? 'selected' : ''} ${capability.isPopularBundlePart ? 'popular-bundle-part' : ''}`;
+            option.className = `config-option ${isSelected ? 'selected' : ''} ${capability.isPopularBundlePart ? 'popular-bundle-part' : ''} ${isIncluded ? 'included-option' : ''}`;
             option.dataset.capabilityId = capId;
+
             option.onclick = () => {
                 const newConfig = { ...config };
                 newConfig.capabilities = newConfig.capabilities || [];
-                
+
                 const idx = newConfig.capabilities.indexOf(capId);
                 if (idx > -1) {
                     newConfig.capabilities.splice(idx, 1);
                 } else {
                     newConfig.capabilities.push(capId);
                 }
-                
+
                 this.state.updateServiceConfig(serviceId, newConfig);
             };
 
             option.innerHTML = `
                 <span class="option-icon">${capability.icon}</span>
-                <div class="option-title">${capability.name}</div>
+                <div class="option-title">
+                    ${capability.name}
+                    ${isIncluded ? '<span class="included-badge">Included</span>' : ''}
+                </div>
                 <div class="option-description">${capability.pitch || ''}</div>
-                ${capability.price > 0 ? `<div class="option-price">+$${capability.price}</div>` : ''}
+                ${
+                    isIncluded
+                        ? `<div class="option-price included-price">Included</div>`
+                        : (capability.price > 0 ? `<div class="option-price">+$${capability.price}</div>` : '')
+                }
                 ${capability.isPopularBundlePart ? `<div class="bundle-indicator">Popular Bundle Item</div>` : ''}
             `;
 
@@ -536,9 +577,9 @@ class UIHandler {
     renderServiceLevels(serviceId) {
         const container = document.getElementById(`levels-${serviceId}`);
         if (!container) return;
-        
+
         const config = this.state.serviceConfigs[serviceId] || {};
-        
+
         this.config.SERVICE_LEVELS.forEach(level => {
             const isSelected = config.serviceLevel === level.id;
             const option = document.createElement('div');
@@ -571,15 +612,15 @@ class UIHandler {
     renderAddons(serviceId) {
         const container = document.getElementById(`addons-${serviceId}`);
         if (!container) return;
-        
+
         const config = this.state.serviceConfigs[serviceId] || {};
-        
+
         // Determine which addons to show (all if toggled, otherwise first 4)
         const showAll = this.state.preferences.showAllAddons;
         const addonsToShow = showAll ? this.config.ADDONS : this.config.ADDONS.slice(0, 4);
-        
+
         container.innerHTML = '';
-        
+
         addonsToShow.forEach(addon => {
             const isSelected = (config.addons || []).includes(addon.id);
             const option = document.createElement('div');
@@ -588,27 +629,32 @@ class UIHandler {
             option.onclick = () => {
                 const newConfig = { ...config };
                 newConfig.addons = newConfig.addons || [];
-                
+
                 const idx = newConfig.addons.indexOf(addon.id);
                 if (idx > -1) {
                     newConfig.addons.splice(idx, 1);
                 } else {
                     newConfig.addons.push(addon.id);
                 }
-                
+
                 this.state.updateServiceConfig(serviceId, newConfig);
             };
+
+            // NEW: show addon range if provided, otherwise addon.price
+            const addonDisplay = (addon.priceRange && typeof this.calculator.formatCurrencyRange === 'function')
+                ? this.calculator.formatCurrencyRange(addon.priceRange)
+                : `+$${this.calculator.formatNumber(addon.price)}`;
 
             option.innerHTML = `
                 <span class="option-icon">${addon.icon}</span>
                 <div class="option-title">${addon.name}</div>
                 <div class="option-description">${addon.description}</div>
-                <div class="option-price">+$${addon.price}</div>
+                <div class="option-price">${addonDisplay}</div>
             `;
 
             container.appendChild(option);
         });
-        
+
         // Add view more toggle if not showing all
         if (!showAll && this.config.ADDONS.length > 4) {
             const viewMoreOption = document.createElement('div');
@@ -621,20 +667,20 @@ class UIHandler {
                     }
                 });
             };
-            
+
             viewMoreOption.innerHTML = `
                 <span class="option-icon">➕</span>
                 <div class="option-title">View More Add-ons</div>
                 <div class="option-description">See ${this.config.ADDONS.length - 4} more technical enhancements</div>
             `;
-            
+
             container.appendChild(viewMoreOption);
         }
     }
 
     activateTab(serviceId) {
         this.state.activeTab = serviceId;
-        
+
         // Update tab UI
         document.querySelectorAll('.service-tab').forEach(tab => {
             if (tab.dataset.serviceId === serviceId) {
@@ -643,7 +689,7 @@ class UIHandler {
                 tab.classList.remove('active');
             }
         });
-        
+
         // Update content UI
         document.querySelectorAll('.tab-content').forEach(content => {
             if (content.dataset.serviceId === serviceId) {
@@ -658,14 +704,14 @@ class UIHandler {
     renderReview() {
         const body = document.getElementById('step-review-body');
         if (!body) return;
-        
+
         const quote = this.calculator.calculateTotalQuote(this.state);
         const timeline = this.calculator.estimateTimeline(
             this.state.selectedServices,
             this.getHighestServiceLevel()
         );
         const deliveryDate = this.calculator.estimateDeliveryDate(timeline);
-        
+
         body.innerHTML = `
             <div class="help-banner">
                 <span class="help-banner-icon">✨</span>
@@ -673,7 +719,7 @@ class UIHandler {
                     <p><strong>Almost there!</strong> Review your selections below. You can go back to make changes anytime.</p>
                 </div>
             </div>
-            
+
             <div class="invoice-card">
                 ${this.renderInvoiceHeader()}
                 ${this.renderInvoiceScope()}
@@ -711,7 +757,7 @@ class UIHandler {
     renderInvoiceScope() {
         const industry = this.config.INDUSTRIES.find(i => i.id === this.state.commonConfig.industry);
         const scale = this.config.BUSINESS_SCALES.find(s => s.id === this.state.commonConfig.scale);
-        
+
         return `
             <div class="invoice-section">
                 <h3>Project Scope</h3>
@@ -747,7 +793,12 @@ class UIHandler {
     renderInvoiceService(service) {
         const serviceConfig = this.config.SERVICES[service.serviceId];
         const serviceLevel = this.config.SERVICE_LEVELS.find(l => l.id === this.state.serviceConfigs[service.serviceId]?.serviceLevel);
-        
+
+        // NEW: show service subtotal range in review
+        const serviceTotalDisplay = service.subtotalRange
+            ? this.formatRangeOrNumber(service.subtotalRange, service.subtotal)
+            : `$${this.calculator.formatNumber(service.subtotal)}`;
+
         return `
             <div class="invoice-service">
                 <div class="service-header">
@@ -757,22 +808,25 @@ class UIHandler {
                         ${service.isMonthly ? '<span class="monthly-badge">Monthly</span>' : ''}
                     </div>
                     <div class="service-price">
-                        $${this.calculator.formatNumber(service.subtotal)}
+                        ${serviceTotalDisplay}
                         ${service.isMonthly ? '<span class="price-period">/month</span>' : ''}
                     </div>
                 </div>
-                
+
                 ${service.breakdown.length > 0 ? `
                     <div class="service-breakdown">
-                        ${service.breakdown.map(item => `
-                            <div class="breakdown-item">
-                                <span class="breakdown-name">• ${item.name}</span>
-                                <span class="breakdown-price">+$${this.calculator.formatNumber(item.amount)}</span>
-                            </div>
-                        `).join('')}
+                        ${service.breakdown.map(item => {
+                            const isIncluded = item.included === true || item.amount === 0;
+                            return `
+                                <div class="breakdown-item">
+                                    <span class="breakdown-name">• ${item.name}${isIncluded ? ' <span class="included-pill">Included</span>' : ''}</span>
+                                    <span class="breakdown-price">${isIncluded ? 'Included' : `+$${this.calculator.formatNumber(item.amount)}`}</span>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 ` : ''}
-                
+
                 ${serviceLevel ? `
                     <div class="service-level">
                         <div class="level-name">${serviceLevel.name} Service Level</div>
@@ -786,14 +840,26 @@ class UIHandler {
     renderInvoiceTotals(quote) {
         const hasMonthly = quote.hasMonthly;
         const hasDiscount = quote.totalDiscount > 0;
-        
+
+        const subtotalDisplay = quote.subtotalRange
+            ? this.formatRangeOrNumber(quote.subtotalRange, quote.subtotal)
+            : `$${this.calculator.formatNumber(quote.subtotal)}`;
+
+        const finalDisplay = quote.finalTotalRange
+            ? this.formatRangeOrNumber(quote.finalTotalRange, quote.finalTotal)
+            : `$${this.calculator.formatNumber(quote.finalTotal)}`;
+
+        const westernDisplay = quote.westernAgencyPriceRange
+            ? this.formatRangeOrNumber(quote.westernAgencyPriceRange, quote.westernAgencyPrice)
+            : `$${this.calculator.formatNumber(quote.westernAgencyPrice)}`;
+
         return `
             <div class="invoice-totals">
                 <div class="total-row">
                     <span class="total-label">Subtotal</span>
-                    <span class="total-value">$${this.calculator.formatNumber(quote.subtotal)}</span>
+                    <span class="total-value">${subtotalDisplay}</span>
                 </div>
-                
+
                 ${hasDiscount ? `
                     <div class="total-row discount-row">
                         <span class="total-label">
@@ -801,7 +867,7 @@ class UIHandler {
                         </span>
                         <span class="total-value discount">-$${this.calculator.formatNumber(quote.totalDiscount)}</span>
                     </div>
-                    
+
                     ${quote.appliedBundles.length > 0 ? `
                         <div class="bundle-savings">
                             <div class="bundle-savings-title">✨ Applied Growth Packages:</div>
@@ -814,22 +880,23 @@ class UIHandler {
                         </div>
                     ` : ''}
                 ` : ''}
-                
+
                 <div class="total-row grand-total">
                     <div class="grand-total-left">
                         <div class="total-label grand">Estimated Total</div>
                         <div class="total-period">${hasMonthly ? 'Monthly investment' : 'One-time investment'}</div>
+                        <div class="estimate-note">Final price may vary based on scope and technical complexity.</div>
                     </div>
                     <div class="grand-total-right">
-                        <div class="total-value grand count-animation">$${this.calculator.formatNumber(quote.finalTotal)}</div>
+                        <div class="total-value grand count-animation">${finalDisplay}</div>
                         ${hasMonthly ? '<div class="total-period">/month</div>' : ''}
                     </div>
                 </div>
-                
+
                 <div class="price-anchor">
                     <div class="anchor-label">💎 Western Agency Value</div>
-                    <div class="anchor-value">$${this.calculator.formatNumber(quote.westernAgencyPrice)}</div>
-                    <div class="anchor-note">Estimated price from a typical US-based agency</div>
+                    <div class="anchor-value">${westernDisplay}</div>
+                    <div class="anchor-note">Estimated range from a typical US-based agency</div>
                 </div>
             </div>
         `;
@@ -866,7 +933,7 @@ class UIHandler {
             this.elements.videoOption.classList.toggle('selected', this.state.preferences.wantsVideo);
             this.elements.videoCheckbox.classList.toggle('checked', this.state.preferences.wantsVideo);
         }
-        
+
         // Update the form summary
         this.renderContactSummary();
     }
@@ -874,9 +941,13 @@ class UIHandler {
     renderContactSummary() {
         const summaryEl = document.getElementById('contact-summary');
         if (!summaryEl) return;
-        
+
         const quote = this.calculator.calculateTotalQuote(this.state);
-        
+
+        const finalDisplay = quote.finalTotalRange
+            ? this.formatRangeOrNumber(quote.finalTotalRange, quote.finalTotal)
+            : `$${this.calculator.formatNumber(quote.finalTotal)}`;
+
         summaryEl.innerHTML = `
             <div class="contact-summary-card">
                 <h3>Your Estimate Summary</h3>
@@ -886,7 +957,7 @@ class UIHandler {
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Investment:</span>
-                    <span class="summary-value">$${this.calculator.formatNumber(quote.finalTotal)}</span>
+                    <span class="summary-value">${finalDisplay}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Billing:</span>
@@ -906,10 +977,10 @@ class UIHandler {
     renderSummary() {
         const container = this.elements.summaryContent;
         if (!container) return;
-        
+
         const quote = this.calculator.calculateTotalQuote(this.state);
         const hasRecurring = this.state.hasMonthlyService;
-        
+
         const servicesHtml = this.state.selectedServices.length === 0
             ? `<p class="empty-summary">No services selected</p>`
             : `
@@ -920,13 +991,14 @@ class UIHandler {
                     </div>
                     ${this.state.selectedServices.map(id => {
                         const s = this.config.SERVICES[id];
+                        const baseDisplay = this.getServiceBaseDisplay(s);
                         return `
                             <div class="service-item">
                                 <span class="service-name">
                                     <span>${s.icon}</span>
                                     <span>${s.name}</span>
                                 </span>
-                                <span class="service-price">$${(s.basePrice || 0).toLocaleString()}${s.isMonthly ? '<span class="price-period">/mo</span>' : ''}</span>
+                                <span class="service-price">${baseDisplay}${s.isMonthly ? '<span class="price-period">/mo</span>' : ''}</span>
                             </div>
                         `;
                     }).join('')}
@@ -950,13 +1022,21 @@ class UIHandler {
             </div>
         ` : '';
 
+        const subtotalDisplay = quote.subtotalRange
+            ? this.formatRangeOrNumber(quote.subtotalRange, quote.subtotal)
+            : `$${this.calculator.formatNumber(quote.subtotal)}`;
+
+        const finalDisplay = quote.finalTotalRange
+            ? this.formatRangeOrNumber(quote.finalTotalRange, quote.finalTotal)
+            : `$${this.calculator.formatNumber(quote.finalTotal)}`;
+
         container.innerHTML = `
             ${servicesHtml}
             ${scopeHtml}
             <div class="pricing-section">
                 <div class="pricing-item">
                     <span class="pricing-label">${hasRecurring ? 'Starting Monthly' : 'Starting From'}</span>
-                    <span class="pricing-value">$${this.calculator.formatNumber(quote.subtotal)}</span>
+                    <span class="pricing-value">${subtotalDisplay}</span>
                 </div>
                 ${quote.totalDiscount > 0 ? `
                     <div class="pricing-item discount">
@@ -968,11 +1048,11 @@ class UIHandler {
             <div class="total-section">
                 <div class="total-display">
                     <div class="total-left">
-                        <div class="total-label">Base Estimate</div>
-                        <div class="total-subtitle">Configure for final pricing</div>
+                        <div class="total-label">Estimate Range</div>
+                        <div class="total-subtitle">Final pricing depends on scope</div>
                     </div>
                     <div class="total-right">
-                        <div class="total-amount count-animation">$${this.calculator.formatNumber(quote.finalTotal)}</div>
+                        <div class="total-amount count-animation">${finalDisplay}</div>
                         ${hasRecurring ? `<div class="total-period">/month</div>` : ''}
                     </div>
                 </div>
@@ -984,11 +1064,11 @@ class UIHandler {
     renderBundles() {
         const container = this.elements.bundlesContainer;
         if (!container) return;
-        
+
         // Only show bundles container if there are applied bundles
         if (this.state.appliedBundles.length > 0) {
             container.style.display = 'block';
-            
+
             container.innerHTML = `
                 <div class="bundles-header">
                     <span>✨</span>
@@ -1035,14 +1115,14 @@ class UIHandler {
         if (this.elements.servicesContinue) {
             this.elements.servicesContinue.disabled = this.state.selectedServices.length === 0;
         }
-        
+
         if (this.elements.scopeContinue) {
-            this.elements.scopeContinue.disabled = 
+            this.elements.scopeContinue.disabled =
                 !this.state.commonConfig.industry || !this.state.commonConfig.scale;
         }
-        
+
         if (this.elements.detailsContinue) {
-            const allServicesConfigured = this.state.selectedServices.every(serviceId => 
+            const allServicesConfigured = this.state.selectedServices.every(serviceId =>
                 this.state.serviceConfigs[serviceId]?.serviceLevel
             );
             this.elements.detailsContinue.disabled = !allServicesConfigured;
