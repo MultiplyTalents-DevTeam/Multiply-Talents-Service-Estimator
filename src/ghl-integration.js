@@ -2,6 +2,7 @@
  * GHL INTEGRATION MODULE (PRODUCTION SAFE)
  * - Loads GHL custom field IDs from /api/ghl-estimator-fields
  * - Sends dropdown OPTION VALUES (not labels)
+ * - Adds friendly keys for workflow mapping (Inbound Webhook)
  * - Better error surfacing
  */
 
@@ -140,13 +141,11 @@ class GHLIntegration {
 
   // IMPORTANT:
   // Send OPTION VALUES that match your GHL custom field option values.
-  // From your screenshot, those look like snake_case ids (e.g. new_ghl_setup).
   mapSelectedServicesToOptionValues(serviceIds) {
     if (!Array.isArray(serviceIds)) return [];
-    return serviceIds; // option values == internal ids (best match)
+    return serviceIds; // option values == internal ids
   }
 
-  // Same logic: use IDs (option values), not display names
   mapIndustryToOptionValue(industryId) {
     return industryId || 'other';
   }
@@ -173,6 +172,8 @@ class GHLIntegration {
     const customField = {};
 
     const selectedServices = this.mapSelectedServicesToOptionValues(state.selectedServices);
+    const selectedServicesText = selectedServices.join(', ');
+
     const businessScale = this.mapScaleToOptionValue(state.commonConfig?.scale);
     const industryType = this.mapIndustryToOptionValue(state.commonConfig?.industry);
     const serviceLevel = this.getPrimaryServiceLevelId(state);
@@ -192,7 +193,7 @@ class GHLIntegration {
       timestamp: new Date().toISOString()
     });
 
-    // IDs as keys (this is correct for API usage)
+    // IDs as keys (correct for API usage)
     if (fieldIds.selected_services) customField[fieldIds.selected_services] = selectedServices;
     if (fieldIds.business_scale) customField[fieldIds.business_scale] = businessScale;
     if (fieldIds.service_level) customField[fieldIds.service_level] = serviceLevel;
@@ -206,6 +207,7 @@ class GHLIntegration {
     if (fieldIds.video_walkthrough) customField[fieldIds.video_walkthrough] = videoWalkthrough;
     if (fieldIds.full_quote_json) customField[fieldIds.full_quote_json] = fullQuoteJson;
 
+    // ✅ Friendly keys for workflow mapping (Inbound Webhook "Create Contact" step)
     return {
       email: contactData.email,
       firstName: contactData.firstName,
@@ -213,7 +215,22 @@ class GHLIntegration {
       phone: contactData.phone || '',
       company: contactData.company || '',
 
+      // For API upsert:
       customField,
+
+      // For workflow mapping:
+      selected_services: selectedServices,               // array (best for MULTIPLE_OPTIONS)
+      selected_services_text: selectedServicesText,      // string backup
+      business_scale: businessScale,
+      industry_type: industryType,
+      service_level: serviceLevel,
+      estimated_investment: estimatedInvestment,
+      bundle_discount: bundleDiscount,
+      final_quote_total: finalQuoteTotal,
+      project_description: projectDescription,
+      video_walkthrough: videoWalkthrough,
+      full_quote_json: fullQuoteJson,
+
       tags: ['service-estimator', 'quote-request'],
       pipelineStage: this.determinePipeline(state)
     };
