@@ -1,6 +1,7 @@
 /**
- * GHL INTEGRATION MODULE (PRODUCTION SAFE)
- * - Sends GHL Custom Fields using FIELD IDs (not merge keys)
+ * GHL INTEGRATION MODULE (OPTION B - PRODUCTION SAFE)
+ * - Browser sends only logical estimator fields (NO field IDs, NO secrets)
+ * - Server (/api/submit-quote) maps logical keys -> real GHL custom field IDs
  * - MULTIPLE_OPTIONS -> array
  * - SINGLE_OPTIONS/LARGE_TEXT -> string
  * - MONETARY -> number
@@ -8,49 +9,13 @@
 
 class GHLIntegration {
   constructor() {
-    // Vercel proxy endpoint
-    this.webhookUrl = '/api/submit-quote';
+    // Vercel proxy endpoint (serverless function)
+    this.endpointUrl = '/api/submit-quote';
 
-    /**
-     * IMPORTANT:
-     * These MUST be the actual GHL Custom Field IDs (not the merge keys).
-     * Example (fake): "selected_services": "8YhK1x9QpLz...."
-     *
-     * If this is missing or still using the merge keys,
-     * your fields will stay blank in GHL.
-     */
-    this.fieldIds = window.GHL_CONFIG?.customFields || null;
-
+    // We no longer require window.GHL_CONFIG.customFields for Option B.
+    // (All ID mapping happens server-side)
     this.maxRetries = 3;
     this.retryDelay = 1000;
-
-    this.assertConfig();
-  }
-
-  // ==================== CONFIG GUARD ====================
-  assertConfig() {
-    const required = [
-      'selected_services',
-      'business_scale',
-      'service_level',
-      'estimated_investment',
-      'bundle_discount',
-      'final_quote_total',
-      'project_description',
-      'video_walkthrough',
-      'full_quote_json',
-      'industry_type'
-    ];
-
-    if (!this.fieldIds) {
-      console.error('[GHLIntegration] Missing window.GHL_CONFIG.customFields (must contain field IDs).');
-      return;
-    }
-
-    const missing = required.filter((k) => !this.fieldIds[k] || typeof this.fieldIds[k] !== 'string');
-    if (missing.length) {
-      console.error('[GHLIntegration] Missing custom field IDs for:', missing);
-    }
   }
 
   // ==================== VALIDATION ====================
@@ -61,11 +26,18 @@ class GHLIntegration {
     return errors;
   }
 
-  // ==================== WEBHOOK INTEGRATION ====================
+  // ==================== SUBMIT ====================
   async submitQuote(contactData, quoteData, state) {
-    const payload = this.formatGHLPayload(contactData, quoteData, state);
+    const errors = this.validateContactData(contactData);
+    if (errors.length) {
+      const msg = errors.join(' ');
+      console.error('[GHLIntegration] Validation failed:', msg);
+      throw new Error(msg);
+    }
 
-    console.log('[GHLIntegration] Submitting payload to Vercel proxy:', payload);
+    const payload = this.formatPayload(contactData, quoteData, state);
+
+    console.log('[GHLIntegration] Submitting payload to Vercel API:', payload);
 
     try {
       const response = await this.sendWithRetry(payload);
@@ -75,7 +47,7 @@ class GHLIntegration {
       }
 
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `API Error: ${response.status}`);
+      throw new Error(errorData.error || errorData.message || `API Error: ${response.status}`);
     } catch (error) {
       console.error('[GHLIntegration] Submission failed:', error);
       await this.handleFailure(error, payload);
@@ -85,7 +57,7 @@ class GHLIntegration {
 
   async sendWithRetry(payload, retryCount = 0) {
     try {
-      return await fetch(this.webhookUrl, {
+      return await fetch(this.endpointUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +86,7 @@ class GHLIntegration {
     return String(v);
   }
 
-  // Convert internal IDs to labels so they match your GHL dropdown options
+  // Convert internal IDs to labels (must match your GHL options)
   mapServiceIdsToNames(serviceIds) {
     if (!Array.isArray(serviceIds)) return [];
     return serviceIds.map((id) => CONFIG?.SERVICES?.[id]?.name || id);
@@ -132,12 +104,10 @@ class GHLIntegration {
 
   mapServiceLevelIdToName(levelId) {
     const found = (CONFIG?.SERVICE_LEVELS || []).find((l) => l.id === levelId);
-    // If not found, fallback to title-case
     return found?.name || (levelId ? levelId.charAt(0).toUpperCase() + levelId.slice(1) : 'Standard');
   }
 
   getPrimaryServiceLevelId(state) {
-    // highest among selected services
     let highest = 'standard';
     const order = ['standard', 'premium', 'luxury'];
 
@@ -149,51 +119,47 @@ class GHLIntegration {
     return highest;
   }
 
-  // ==================== PAYLOAD FORMAT ====================
-  formatGHLPayload(contactData, quoteData, state) {
-    // If field IDs are missing, still send basic contact data (avoid hard crash)
-    const fieldIds = this.fieldIds || {};
+  // ==================== PAYLOAD FORMAT (Option B) ====================
+  formatPayload(contactData, quoteData, state) {
+    // Values in the EXACT type we want to store
+    const selectedServicesNames = this.mapServiceIdsToNames(state.selectedServices); // array
+    const businessScaleName = this.mapScaleIdToName(state.commonConfig?.scale);     // string
+    const industryName = this.mapIndustryIdToName(state.commonConfig?.industry);   // string
+    const serviceLevelName = this.mapServiceLevelIdToName(this.getPrimaryServiceLevelId(state)); // string
 
-    // Build values in the EXACT type GHL expects
-    const selectedServicesNames = this.mapServiceIdsToNames(state.selectedServices); // MULTIPLE_OPTIONS -> array
-    const businessScaleName = this.mapScaleIdToName(state.commonConfig?.scale);     // SINGLE_OPTIONS -> string
-    const industryName = this.mapIndustryIdToName(state.commonConfig?.industry);   // SINGLE_OPTIONS -> string
-    const serviceLevelName = this.mapServiceLevelIdToName(this.getPrimaryServiceLevelId(state)); // SINGLE_OPTIONS -> string
-
-    // These should match your calculator output:
-    // If your calculator uses different names, update these 3 lines only.
-    const estimatedInvestment = this.toNumber(quoteData?.subtotal, 0);        // MONETARY -> number
+    // Calculator output (adjust if your keys differ)
+    const estimatedInvestment = this.toNumber(quoteData?.subtotal, 0);
     const bundleDiscount = this.toNumber(quoteData?.totalDiscount ?? quoteData?.discount, 0);
     const finalQuoteTotal = this.toNumber(quoteData?.finalTotal ?? quoteData?.total, 0);
 
     const projectDescription = this.toStringSafe(contactData.projectDescription, '');
     const videoWalkthrough = state.preferences?.wantsVideo ? 'Yes' : 'No';
 
-    const fullQuoteJson = JSON.stringify({
+    // Store a JSON snapshot as text (server will stringify if needed too)
+    const fullQuoteJson = {
       selectedServices: state.selectedServices || [],
       selectedServicesNames,
       commonConfig: state.commonConfig || {},
       serviceConfigs: state.serviceConfigs || {},
       quote: quoteData || {},
       timestamp: new Date().toISOString()
-    });
+    };
 
-    // IMPORTANT: customField keys must be FIELD IDs
-    const customField = {};
+    // Logical keys ONLY (server maps these to field IDs)
+    const estimatorFields = {
+      selected_services: selectedServicesNames,
+      business_scale: businessScaleName,
+      service_level: serviceLevelName,
+      industry_type: industryName,
 
-    // Only set if IDs exist (prevents sending wrong keys)
-    if (fieldIds.selected_services) customField[fieldIds.selected_services] = selectedServicesNames;
-    if (fieldIds.business_scale) customField[fieldIds.business_scale] = businessScaleName;
-    if (fieldIds.service_level) customField[fieldIds.service_level] = serviceLevelName;
-    if (fieldIds.industry_type) customField[fieldIds.industry_type] = industryName;
+      estimated_investment: estimatedInvestment,
+      bundle_discount: bundleDiscount,
+      final_quote_total: finalQuoteTotal,
 
-    if (fieldIds.estimated_investment) customField[fieldIds.estimated_investment] = estimatedInvestment;
-    if (fieldIds.bundle_discount) customField[fieldIds.bundle_discount] = bundleDiscount;
-    if (fieldIds.final_quote_total) customField[fieldIds.final_quote_total] = finalQuoteTotal;
-
-    if (fieldIds.project_description) customField[fieldIds.project_description] = projectDescription;
-    if (fieldIds.video_walkthrough) customField[fieldIds.video_walkthrough] = videoWalkthrough;
-    if (fieldIds.full_quote_json) customField[fieldIds.full_quote_json] = fullQuoteJson;
+      project_description: projectDescription,
+      video_walkthrough: videoWalkthrough,
+      full_quote_json: fullQuoteJson
+    };
 
     return {
       email: contactData.email,
@@ -202,7 +168,7 @@ class GHLIntegration {
       phone: contactData.phone || '',
       company: contactData.company || '',
 
-      customField,
+      estimatorFields, // <-- Option B key
 
       tags: ['service-estimator', 'quote-request'],
       pipelineStage: this.determinePipeline(state)

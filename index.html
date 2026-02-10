@@ -6,24 +6,6 @@
     <title>Premium Service Estimator - MultiplyTalents</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script>
-        // GHL-specific configuration (injected by GHL)
-        window.GHL_CONFIG = {
-            webhookUrl: '{{custom.estimator_webhook_url}}',
-            customFields: {
-                selected_services: '{{ contact.selected_services }}',
-                business_scale: '{{ contact.business_scale }}',
-                service_level: '{{ contact.service_level }}',
-                industry_type: '{{ contact.industry_type }}',
-                estimated_investment: '{{ contact.estimated_investment }}',
-                bundle_discount: '{{ contact.bundle_discount }}',
-                final_quote_total: '{{ contact.final_quote_total }}',
-                project_description: '{{ contact.project_description }}',
-                video_walkthrough: '{{ contact.video_walkthrough }}',
-                full_quote_json: '{{ contact.full_quote_json }}'
-            }
-        };
-    </script>
 </head>
 <body>
     <div id="estimator-app">
