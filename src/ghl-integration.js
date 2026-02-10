@@ -1,21 +1,50 @@
 /**
- * GHL INTEGRATION MODULE (OPTION B - PRODUCTION SAFE)
- * - Browser sends only logical estimator fields (NO field IDs, NO secrets)
- * - Server (/api/submit-quote) maps logical keys -> real GHL custom field IDs
- * - MULTIPLE_OPTIONS -> array
- * - SINGLE_OPTIONS/LARGE_TEXT -> string
- * - MONETARY -> number
+ * GHL INTEGRATION MODULE (PRODUCTION SAFE)
+ * - Uses Vercel proxy endpoint /api/submit-quote
+ * - Sends customFields using FIELD IDs (not merge keys)
+ * - IMPORTANT: Dropdown fields should send OPTION VALUES (often snake_case ids),
+ *   not display labels, unless your GHL option values are the labels.
  */
 
 class GHLIntegration {
   constructor() {
-    // Vercel proxy endpoint (serverless function)
-    this.endpointUrl = '/api/submit-quote';
+    this.apiUrl = '/api/submit-quote';
 
-    // We no longer require window.GHL_CONFIG.customFields for Option B.
-    // (All ID mapping happens server-side)
+    // You said you already fetched these field IDs successfully.
+    // This must be an object like:
+    // { selected_services: "eA6bJ4aG4wjmA214vAKr", business_scale: "...", ... }
+    this.fieldIds = window.GHL_CONFIG?.customFields || null;
+
     this.maxRetries = 3;
     this.retryDelay = 1000;
+
+    this.assertConfig();
+  }
+
+  // ==================== CONFIG GUARD ====================
+  assertConfig() {
+    const required = [
+      'selected_services',
+      'business_scale',
+      'service_level',
+      'estimated_investment',
+      'bundle_discount',
+      'final_quote_total',
+      'project_description',
+      'video_walkthrough',
+      'full_quote_json',
+      'industry_type'
+    ];
+
+    if (!this.fieldIds) {
+      console.error('[GHLIntegration] Missing window.GHL_CONFIG.customFields (must contain field IDs).');
+      return;
+    }
+
+    const missing = required.filter((k) => !this.fieldIds[k] || typeof this.fieldIds[k] !== 'string');
+    if (missing.length) {
+      console.error('[GHLIntegration] Missing custom field IDs for:', missing);
+    }
   }
 
   // ==================== VALIDATION ====================
@@ -29,35 +58,31 @@ class GHLIntegration {
   // ==================== SUBMIT ====================
   async submitQuote(contactData, quoteData, state) {
     const errors = this.validateContactData(contactData);
-    if (errors.length) {
-      const msg = errors.join(' ');
-      console.error('[GHLIntegration] Validation failed:', msg);
-      throw new Error(msg);
-    }
+    if (errors.length) throw new Error(errors.join(' '));
 
-    const payload = this.formatPayload(contactData, quoteData, state);
+    const payload = this.formatGHLPayload(contactData, quoteData, state);
 
     console.log('[GHLIntegration] Submitting payload to Vercel API:', payload);
 
-    try {
-      const response = await this.sendWithRetry(payload);
+    const response = await this.sendWithRetry(payload);
 
-      if (response.ok) {
-        return await this.handleSuccessResponse(response);
-      }
+    // Always try to read response body so you see REAL error messages
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
 
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || errorData.message || `API Error: ${response.status}`);
-    } catch (error) {
-      console.error('[GHLIntegration] Submission failed:', error);
-      await this.handleFailure(error, payload);
-      throw error;
+    if (!response.ok) {
+      console.error('[GHLIntegration] Server error response:', data);
+      throw new Error(data?.message || data?.error || `API Error: ${response.status}`);
     }
+
+    console.log('[GHLIntegration] Submission successful:', data);
+    return { success: true, data };
   }
 
   async sendWithRetry(payload, retryCount = 0) {
     try {
-      return await fetch(this.endpointUrl, {
+      return await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +100,7 @@ class GHLIntegration {
     }
   }
 
-  // ==================== DATA HELPERS ====================
+  // ==================== HELPERS ====================
   toNumber(v, fallback = 0) {
     const n = Number(v);
     return Number.isFinite(n) ? n : fallback;
@@ -86,25 +111,22 @@ class GHLIntegration {
     return String(v);
   }
 
-  // Convert internal IDs to labels (must match your GHL options)
-  mapServiceIdsToNames(serviceIds) {
-    if (!Array.isArray(serviceIds)) return [];
-    return serviceIds.map((id) => CONFIG?.SERVICES?.[id]?.name || id);
+  /**
+   * IMPORTANT FIX:
+   * For dropdown option fields in GHL, you almost always want to send the OPTION VALUE.
+   * Your service IDs already match your option values (new_ghl_setup, platform_migration, fix_optimize),
+   * so don’t convert them into labels like "New GHL Setup" (that can break option matching).
+   */
+  getSelectedServiceOptionValues(state) {
+    return Array.isArray(state.selectedServices) ? state.selectedServices : [];
   }
 
-  mapIndustryIdToName(industryId) {
-    const found = (CONFIG?.INDUSTRIES || []).find((i) => i.id === industryId);
-    return found?.name || 'Other';
+  getIndustryOptionValue(state) {
+    return state.commonConfig?.industry || '';
   }
 
-  mapScaleIdToName(scaleId) {
-    const found = (CONFIG?.BUSINESS_SCALES || []).find((s) => s.id === scaleId);
-    return found?.name || 'Solopreneur';
-  }
-
-  mapServiceLevelIdToName(levelId) {
-    const found = (CONFIG?.SERVICE_LEVELS || []).find((l) => l.id === levelId);
-    return found?.name || (levelId ? levelId.charAt(0).toUpperCase() + levelId.slice(1) : 'Standard');
+  getScaleOptionValue(state) {
+    return state.commonConfig?.scale || '';
   }
 
   getPrimaryServiceLevelId(state) {
@@ -119,47 +141,52 @@ class GHLIntegration {
     return highest;
   }
 
-  // ==================== PAYLOAD FORMAT (Option B) ====================
-  formatPayload(contactData, quoteData, state) {
-    // Values in the EXACT type we want to store
-    const selectedServicesNames = this.mapServiceIdsToNames(state.selectedServices); // array
-    const businessScaleName = this.mapScaleIdToName(state.commonConfig?.scale);     // string
-    const industryName = this.mapIndustryIdToName(state.commonConfig?.industry);   // string
-    const serviceLevelName = this.mapServiceLevelIdToName(this.getPrimaryServiceLevelId(state)); // string
+  getVideoWalkthroughValue(state) {
+    // If your GHL options are "Yes"/"No" then keep this.
+    // If your option values are "yes"/"no" then change it.
+    return state.preferences?.wantsVideo ? 'Yes' : 'No';
+  }
 
-    // Calculator output (adjust if your keys differ)
+  // ==================== PAYLOAD FORMAT ====================
+  formatGHLPayload(contactData, quoteData, state) {
+    const fieldIds = this.fieldIds || {};
+
+    // OPTION VALUES (not labels)
+    const selectedServices = this.getSelectedServiceOptionValues(state); // MULTIPLE_OPTIONS -> array of option values
+    const businessScale = this.getScaleOptionValue(state);              // SINGLE_OPTIONS -> option value
+    const industryType = this.getIndustryOptionValue(state);            // SINGLE_OPTIONS -> option value
+    const serviceLevel = this.getPrimaryServiceLevelId(state);          // SINGLE_OPTIONS -> option value (standard/premium/luxury)
+
+    // Pricing (MONETARY fields should be numbers)
     const estimatedInvestment = this.toNumber(quoteData?.subtotal, 0);
     const bundleDiscount = this.toNumber(quoteData?.totalDiscount ?? quoteData?.discount, 0);
     const finalQuoteTotal = this.toNumber(quoteData?.finalTotal ?? quoteData?.total, 0);
 
     const projectDescription = this.toStringSafe(contactData.projectDescription, '');
-    const videoWalkthrough = state.preferences?.wantsVideo ? 'Yes' : 'No';
+    const videoWalkthrough = this.getVideoWalkthroughValue(state);
 
-    // Store a JSON snapshot as text (server will stringify if needed too)
-    const fullQuoteJson = {
-      selectedServices: state.selectedServices || [],
-      selectedServicesNames,
+    const fullQuoteJson = JSON.stringify({
+      selectedServices,
       commonConfig: state.commonConfig || {},
       serviceConfigs: state.serviceConfigs || {},
       quote: quoteData || {},
       timestamp: new Date().toISOString()
-    };
+    });
 
-    // Logical keys ONLY (server maps these to field IDs)
-    const estimatorFields = {
-      selected_services: selectedServicesNames,
-      business_scale: businessScaleName,
-      service_level: serviceLevelName,
-      industry_type: industryName,
+    // customField keys MUST be FIELD IDs
+    const customField = {};
+    if (fieldIds.selected_services) customField[fieldIds.selected_services] = selectedServices;
+    if (fieldIds.business_scale) customField[fieldIds.business_scale] = businessScale;
+    if (fieldIds.service_level) customField[fieldIds.service_level] = serviceLevel;
+    if (fieldIds.industry_type) customField[fieldIds.industry_type] = industryType;
 
-      estimated_investment: estimatedInvestment,
-      bundle_discount: bundleDiscount,
-      final_quote_total: finalQuoteTotal,
+    if (fieldIds.estimated_investment) customField[fieldIds.estimated_investment] = estimatedInvestment;
+    if (fieldIds.bundle_discount) customField[fieldIds.bundle_discount] = bundleDiscount;
+    if (fieldIds.final_quote_total) customField[fieldIds.final_quote_total] = finalQuoteTotal;
 
-      project_description: projectDescription,
-      video_walkthrough: videoWalkthrough,
-      full_quote_json: fullQuoteJson
-    };
+    if (fieldIds.project_description) customField[fieldIds.project_description] = projectDescription;
+    if (fieldIds.video_walkthrough) customField[fieldIds.video_walkthrough] = videoWalkthrough;
+    if (fieldIds.full_quote_json) customField[fieldIds.full_quote_json] = fullQuoteJson;
 
     return {
       email: contactData.email,
@@ -168,7 +195,7 @@ class GHLIntegration {
       phone: contactData.phone || '',
       company: contactData.company || '',
 
-      estimatorFields, // <-- Option B key
+      customField,
 
       tags: ['service-estimator', 'quote-request'],
       pipelineStage: this.determinePipeline(state)
@@ -179,27 +206,6 @@ class GHLIntegration {
     if ((state.selectedServices || []).includes('monthly_management')) return 'monthly_management';
     if ((state.selectedServices || []).includes('platform_migration')) return 'migration';
     return 'setup';
-  }
-
-  async handleSuccessResponse(response) {
-    const data = await response.json().catch(() => ({ status: 'ok' }));
-    console.log('[GHLIntegration] Submission successful:', data);
-    return { success: true, data };
-  }
-
-  async handleFailure(error, payload) {
-    this.saveFailedSubmission(payload);
-    return { success: false, error: error.message };
-  }
-
-  saveFailedSubmission(payload) {
-    try {
-      const failed = JSON.parse(localStorage.getItem('ghl_failed_submissions') || '[]');
-      failed.push({ payload, timestamp: Date.now() });
-      localStorage.setItem('ghl_failed_submissions', JSON.stringify(failed.slice(-5)));
-    } catch (e) {
-      console.warn('[GHLIntegration] LocalStorage save failed', e);
-    }
   }
 
   delay(ms) {
