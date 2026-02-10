@@ -12,13 +12,11 @@ export default async function handler(req, res) {
 
   const token = process.env.GHL_ACCESS_TOKEN;
   const locationId = process.env.GHL_LOCATION_ID;
+  const webhookUrl = process.env.GHL_WEBHOOK_URL;
 
   if (!token) return res.status(500).json({ ok: false, message: "Missing GHL_ACCESS_TOKEN" });
   if (!locationId) return res.status(500).json({ ok: false, message: "Missing GHL_LOCATION_ID" });
-
-  // Hard set to your estimator pipeline + first stage (can be env override if you want)
-  const PIPELINE_ID = process.env.GHL_PIPELINE_ID || "CGQF7dMJrcE3iUcVnFi3";
-  const STAGE_ID_NEW_QUOTE = process.env.GHL_STAGE_ID_NEW_QUOTE || "ecfeec95-ec21-44d6-bd58-ccaa1a30cdb0";
+  if (!webhookUrl) return res.status(500).json({ ok: false, message: "Missing GHL_WEBHOOK_URL" });
 
   try {
     const body = req.body || {};
@@ -42,7 +40,7 @@ export default async function handler(req, res) {
     // Convert { FIELD_ID: value } -> [{ id, value }]
     const customFieldsArr = Object.entries(customField).map(([id, value]) => ({ id, value }));
 
-    // 1) UPSERT CONTACT
+    // 1) UPSERT CONTACT (so {{contact.*}} merge fields exist for the workflow)
     const upsertRes = await fetch("https://services.leadconnectorhq.com/contacts/upsert", {
       method: "POST",
       headers: {
@@ -64,7 +62,11 @@ export default async function handler(req, res) {
 
     const upsertText = await upsertRes.text();
     let upsertJson = null;
-    try { upsertJson = upsertText ? JSON.parse(upsertText) : null; } catch { upsertJson = { raw: upsertText }; }
+    try {
+      upsertJson = upsertText ? JSON.parse(upsertText) : null;
+    } catch {
+      upsertJson = { raw: upsertText };
+    }
 
     if (!upsertRes.ok) {
       return res.status(upsertRes.status).json({
@@ -88,7 +90,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2) ADD TAGS (workflow trigger)
+    // 2) ADD TAGS (optional, but good for segmentation)
     let tagsResult = { ok: true, skipped: true };
     if (Array.isArray(tags) && tags.length) {
       const tagRes = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
@@ -106,54 +108,44 @@ export default async function handler(req, res) {
       let tagJson = null;
       try { tagJson = tagText ? JSON.parse(tagText) : null; } catch { tagJson = { raw: tagText }; }
       tagsResult = tagRes.ok ? { ok: true, body: tagJson } : { ok: false, body: tagJson };
+      // don't fail whole request if tagging fails
     }
 
-    // 3) ALWAYS CREATE OPPORTUNITY IN "New Quote Submitted"
-    const FINAL_QUOTE_TOTAL_FIELD_ID = "zFS9xdsDgUREGnidzjKW";
-    const monetaryValue = Number(
-      customField?.[FINAL_QUOTE_TOTAL_FIELD_ID] ??
-      Object.values(customField).find((v) => typeof v === "number") ??
-      0
-    );
+    // 3) TRIGGER YOUR OLD WORKFLOW (Inbound Webhook) FROM BACKEND (secure)
+    // This is the key change: workflow will handle task/note/opportunity.
+    const webhookPayload = {
+      ...body,
+      locationId,
+      contactId,
+    };
 
-    const oppRes = await fetch("https://services.leadconnectorhq.com/opportunities/", {
+    const whRes = await fetch(webhookUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Version: "2021-07-28",
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        locationId,
-        pipelineId: PIPELINE_ID,
-        pipelineStageId: STAGE_ID_NEW_QUOTE,
-        status: "open",
-        contactId,
-        name: `Service Estimate - ${company || email}`,
-        monetaryValue,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(webhookPayload),
     });
 
-    const oppText = await oppRes.text();
-    let oppJson = null;
-    try { oppJson = oppText ? JSON.parse(oppText) : null; } catch { oppJson = { raw: oppText }; }
+    const whText = await whRes.text();
+    let whJson = null;
+    try { whJson = whText ? JSON.parse(whText) : null; } catch { whJson = { raw: whText }; }
 
-    if (!oppRes.ok) {
-      return res.status(oppRes.status).json({
+    if (!whRes.ok) {
+      return res.status(whRes.status).json({
         ok: false,
-        message: "Opportunity create failed",
-        details: oppJson,
+        message: "Workflow webhook trigger failed",
+        details: whJson,
       });
     }
 
     return res.status(200).json({
       ok: true,
       contactId,
-      pipelineId: PIPELINE_ID,
-      pipelineStageId: STAGE_ID_NEW_QUOTE,
       tagsResult,
-      opportunity: oppJson,
+      webhookTriggered: {
+        ok: true,
+        status: whRes.status,
+        body: whJson,
+      },
     });
   } catch (err) {
     return res.status(500).json({ ok: false, message: err.message });
