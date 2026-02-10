@@ -3,6 +3,7 @@
  * - Loads GHL custom field IDs from /api/ghl-estimator-fields
  * - Sends dropdown OPTION VALUES (not labels)
  * - Adds friendly keys for workflow mapping (Inbound Webhook)
+ * - Adds estimate range fields for HR readability
  * - Better error surfacing
  */
 
@@ -139,6 +140,25 @@ class GHLIntegration {
     return String(v);
   }
 
+  formatMoney(n) {
+    const num = Number(n);
+    if (!Number.isFinite(num)) return '';
+    try {
+      return `$${num.toLocaleString()}`;
+    } catch {
+      return `$${num}`;
+    }
+  }
+
+  buildEstimateRangeString(rangeObj) {
+    const min = this.toNumber(rangeObj?.min, NaN);
+    const max = this.toNumber(rangeObj?.max, NaN);
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return '';
+    if (min === max) return this.formatMoney(max);
+    return `${this.formatMoney(min)} – ${this.formatMoney(max)}`;
+  }
+
   // IMPORTANT:
   // Send OPTION VALUES that match your GHL custom field option values.
   mapSelectedServicesToOptionValues(serviceIds) {
@@ -182,6 +202,12 @@ class GHLIntegration {
     const bundleDiscount = this.toNumber(quoteData?.totalDiscount ?? quoteData?.discount, 0);
     const finalQuoteTotal = this.toNumber(quoteData?.finalTotal ?? quoteData?.total, 0);
 
+    // ✅ NEW: estimate range (string + min/max)
+    const rangeObj = quoteData?.finalTotalRange || quoteData?.subtotalRange || null;
+    const estimateMin = this.toNumber(rangeObj?.min, null);
+    const estimateMax = this.toNumber(rangeObj?.max, null);
+    const estimateRange = this.buildEstimateRangeString(rangeObj);
+
     const projectDescription = this.toStringSafe(contactData.projectDescription, '');
     const videoWalkthrough = state.preferences?.wantsVideo ? 'yes' : 'no';
 
@@ -190,6 +216,12 @@ class GHLIntegration {
       commonConfig: state.commonConfig || {},
       serviceConfigs: state.serviceConfigs || {},
       quote: quoteData || {},
+      // also include range explicitly for dev clarity
+      estimateRange: {
+        min: estimateMin,
+        max: estimateMax,
+        display: estimateRange
+      },
       timestamp: new Date().toISOString()
     });
 
@@ -227,6 +259,12 @@ class GHLIntegration {
       estimated_investment: estimatedInvestment,
       bundle_discount: bundleDiscount,
       final_quote_total: finalQuoteTotal,
+
+      // ✅ NEW: range fields for HR/task/note display
+      estimate_range: estimateRange,                     // "$1,638 – $1,838"
+      estimate_min: estimateMin,                         // 1638
+      estimate_max: estimateMax,                         // 1838
+
       project_description: projectDescription,
       video_walkthrough: videoWalkthrough,
       full_quote_json: fullQuoteJson,
