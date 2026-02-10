@@ -16,19 +16,9 @@ export default async function handler(req, res) {
   if (!token) return res.status(500).json({ ok: false, message: "Missing GHL_ACCESS_TOKEN" });
   if (!locationId) return res.status(500).json({ ok: false, message: "Missing GHL_LOCATION_ID" });
 
-  // ====== Defaults from your pipeline list (Service Estimator Sales) ======
-  const DEFAULT_PIPELINE_ID = "CGQF7dMJrcE3iUcVnFi3";
-  const DEFAULT_STAGE_SETUP = "ecfeec95-ec21-44d6-bd58-ccaa1a30cdb0"; // New Quote Submitted
-
-  // ====== Allow env overrides (recommended) ======
-  const pipelineId = process.env.GHL_PIPELINE_ID || DEFAULT_PIPELINE_ID;
-
-  // If you set these in env, they override. Otherwise, we’ll fall back.
-  const stageSetup = process.env.GHL_STAGE_ID_SETUP || DEFAULT_STAGE_SETUP;
-
-  // Optional stages (set in env if you want different routing)
-  const stageMigration = process.env.GHL_STAGE_ID_MIGRATION || stageSetup;
-  const stageMonthly = process.env.GHL_STAGE_ID_MONTHLY || stageSetup;
+  // Hard set to your estimator pipeline + first stage (can be env override if you want)
+  const PIPELINE_ID = process.env.GHL_PIPELINE_ID || "CGQF7dMJrcE3iUcVnFi3";
+  const STAGE_ID_NEW_QUOTE = process.env.GHL_STAGE_ID_NEW_QUOTE || "ecfeec95-ec21-44d6-bd58-ccaa1a30cdb0";
 
   try {
     const body = req.body || {};
@@ -40,7 +30,6 @@ export default async function handler(req, res) {
       company,
       customField = {},
       tags = [],
-      pipelineStage = "setup",
     } = body;
 
     if (!email || !firstName) {
@@ -51,11 +40,7 @@ export default async function handler(req, res) {
     }
 
     // Convert { FIELD_ID: value } -> [{ id, value }]
-    // This is the correct shape for contacts/upsert "customFields".
-    const customFieldsArr = Object.entries(customField).map(([id, value]) => ({
-      id,
-      value,
-    }));
+    const customFieldsArr = Object.entries(customField).map(([id, value]) => ({ id, value }));
 
     // 1) UPSERT CONTACT
     const upsertRes = await fetch("https://services.leadconnectorhq.com/contacts/upsert", {
@@ -79,11 +64,7 @@ export default async function handler(req, res) {
 
     const upsertText = await upsertRes.text();
     let upsertJson = null;
-    try {
-      upsertJson = upsertText ? JSON.parse(upsertText) : null;
-    } catch {
-      upsertJson = { raw: upsertText };
-    }
+    try { upsertJson = upsertText ? JSON.parse(upsertText) : null; } catch { upsertJson = { raw: upsertText }; }
 
     if (!upsertRes.ok) {
       return res.status(upsertRes.status).json({
@@ -107,7 +88,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2) ADD TAGS (best workflow trigger)
+    // 2) ADD TAGS (workflow trigger)
     let tagsResult = { ok: true, skipped: true };
     if (Array.isArray(tags) && tags.length) {
       const tagRes = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
@@ -123,31 +104,16 @@ export default async function handler(req, res) {
 
       const tagText = await tagRes.text();
       let tagJson = null;
-      try {
-        tagJson = tagText ? JSON.parse(tagText) : null;
-      } catch {
-        tagJson = { raw: tagText };
-      }
-
+      try { tagJson = tagText ? JSON.parse(tagText) : null; } catch { tagJson = { raw: tagText }; }
       tagsResult = tagRes.ok ? { ok: true, body: tagJson } : { ok: false, body: tagJson };
-      // We do NOT fail the whole request if tags fail.
     }
 
-    // 3) CREATE OPPORTUNITY (THIS is what makes it appear in Opportunities)
-    // Map your incoming pipelineStage string -> stageId
-    const stageMap = {
-      setup: stageSetup,
-      migration: stageMigration,
-      monthly_management: stageMonthly,
-    };
-    const pipelineStageId = stageMap[pipelineStage] || stageSetup;
-
-    // Use Final Quote Total custom field (your ID) if present, otherwise find any number
+    // 3) ALWAYS CREATE OPPORTUNITY IN "New Quote Submitted"
     const FINAL_QUOTE_TOTAL_FIELD_ID = "zFS9xdsDgUREGnidzjKW";
     const monetaryValue = Number(
       customField?.[FINAL_QUOTE_TOTAL_FIELD_ID] ??
-        Object.values(customField).find((v) => typeof v === "number") ??
-        0
+      Object.values(customField).find((v) => typeof v === "number") ??
+      0
     );
 
     const oppRes = await fetch("https://services.leadconnectorhq.com/opportunities/", {
@@ -160,8 +126,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         locationId,
-        pipelineId,
-        pipelineStageId,
+        pipelineId: PIPELINE_ID,
+        pipelineStageId: STAGE_ID_NEW_QUOTE,
         status: "open",
         contactId,
         name: `Service Estimate - ${company || email}`,
@@ -171,11 +137,7 @@ export default async function handler(req, res) {
 
     const oppText = await oppRes.text();
     let oppJson = null;
-    try {
-      oppJson = oppText ? JSON.parse(oppText) : null;
-    } catch {
-      oppJson = { raw: oppText };
-    }
+    try { oppJson = oppText ? JSON.parse(oppText) : null; } catch { oppJson = { raw: oppText }; }
 
     if (!oppRes.ok) {
       return res.status(oppRes.status).json({
@@ -188,8 +150,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       contactId,
-      pipelineId,
-      pipelineStageId,
+      pipelineId: PIPELINE_ID,
+      pipelineStageId: STAGE_ID_NEW_QUOTE,
       tagsResult,
       opportunity: oppJson,
     });
