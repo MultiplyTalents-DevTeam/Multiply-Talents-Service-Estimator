@@ -203,21 +203,48 @@ class UIHandler {
     scrollToTop() {
         const prefersReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         const behavior = prefersReduced ? 'auto' : 'smooth';
+        const duration = prefersReduced ? 0 : 550;
+        const delay = prefersReduced ? 0 : 120;
 
-        // 1) Scroll the window (works for most GHL embeds)
-        try {
-            window.scrollTo({ top: 0, behavior });
-        } catch (e) {
-            window.scrollTo(0, 0);
-        }
+        const doLocalScroll = () => {
+            // 1) Scroll the window (works for normal page + some embeds)
+            try {
+                window.scrollTo({ top: 0, behavior });
+            } catch (e) {
+                window.scrollTo(0, 0);
+            }
 
-        // 2) Scroll the main app container (if it’s the scroll parent)
-        const app = this.elements.app || document.getElementById('estimator-app');
-        if (app && typeof app.scrollTop === 'number') app.scrollTop = 0;
+            // 2) Scroll the main app container (if it’s the scroll parent)
+            const app = this.elements.app || document.getElementById('estimator-app');
+            if (app && typeof app.scrollTop === 'number') app.scrollTop = 0;
 
-        // 3) Scroll the active step container (belt + suspenders)
-        const activeStep = document.querySelector('.step-content.active');
-        if (activeStep && typeof activeStep.scrollTop === 'number') activeStep.scrollTop = 0;
+            // 3) Scroll the active step container (belt + suspenders)
+            const activeStep = document.querySelector('.step-content.active');
+            if (activeStep && typeof activeStep.scrollTop === 'number') activeStep.scrollTop = 0;
+        };
+
+        const notifyParentToScroll = () => {
+            // When embedded in GHL (iframe), the *parent page* is the scroll container.
+            if (window.parent && window.parent !== window) {
+                try {
+                    window.parent.postMessage({
+                        type: 'MT_ESTIMATOR_SCROLL_TOP',
+                        behavior,
+                        duration
+                    }, '*');
+                } catch (e) {
+                    // ignore
+                }
+            }
+        };
+
+        // Tiny delay makes the transition feel less like a jump-cut
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                doLocalScroll();
+                notifyParentToScroll();
+            }, delay);
+        });
     }
 
     showLoading(isLoading, message = 'Submitting...') {
