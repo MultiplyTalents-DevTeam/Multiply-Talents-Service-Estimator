@@ -76,7 +76,7 @@ class GHLIntegration {
   validateContactData(data) {
     const errors = [];
     if (!data.firstName) errors.push('First name is required.');
-    if (!data.email || !data.email.includes('@')) errors.push('A valid email is required.');
+    if (!data.email || !data.email.includes('@') || !data.phone) errors.push('A valid email and phone number are required.');
     return errors;
   }
 

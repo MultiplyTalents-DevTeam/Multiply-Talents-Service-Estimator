@@ -85,7 +85,7 @@
                             <div id="step-review" class="step-content">
                                 <div class="step-header">
                                     <h2>Review Your Strategic Investment</h2>
-                                    <p>Transparent pricing compared against standard Western agency rates</p>
+                                    <p>Transparent pricing compared against a typical US-based (On Shore) agency range in your country</p>
                                     <div class="context-indicator">
                                         <span>📍</span>
                                         <span>Step 4 of 5: Reviewing Proposal</span>
@@ -143,14 +143,17 @@
                                                         <input type="text" class="form-input" name="firstName" placeholder="First Name *" required>
                                                     </div>
                                                     <div class="form-group">
-                                                        <input type="text" class="form-input" name="lastName" placeholder="Last Name">
+                                                        <input type="text" class="form-input" name="lastName" placeholder="Last Name *" required>
                                                     </div>
                                                 </div>
                                                 <div class="form-group">
                                                     <input type="email" class="form-input" name="email" placeholder="Business Email Address *" required>
                                                 </div>
                                                 <div class="form-group">
-                                                    <input type="text" class="form-input" name="company" placeholder="Company / Agency Name">
+                                                    <input type="tel" class="form-input" name="phone" placeholder="Phone Number *" inputmode="tel" autocomplete="tel" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="text" class="form-input" name="company" placeholder="Company / Business Name *" required>
                                                 </div>
                                                 <div class="form-group">
                                                     <textarea class="form-input form-textarea" name="projectDescription" placeholder="Briefly describe your current bottlenecks or goals..." rows="3"></textarea>
@@ -169,15 +172,6 @@
                                                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1.25rem;">
                                                     Secure My Custom Estimate & Strategy
                                                 </button>
-
-                                                <div class="form-divider">
-                                                    <button type="button" class="btn btn-outline" style="width: 100%; justify-content: center;">
-                                                        📅 Book an Implementation Call
-                                                    </button>
-                                                    <p style="text-align: center; font-size: 0.8125rem; color: var(--text-muted); margin-top: 0.75rem;">
-                                                        Prefer to talk now? Schedule a 15-min discovery session.
-                                                    </p>
-                                                </div>
                                             </form>
                                         </div>
                                     </div>
@@ -212,6 +206,21 @@
                     </div>
                     </div>
                 </div>
+        </div>
+    </div>
+
+    <!-- Calendar Modal (iframe popup) -->
+    <div id="calendar-modal" class="hidden" aria-hidden="true">
+        <div class="calendar-modal-backdrop" data-calendar-close></div>
+        <div class="calendar-modal-panel" role="dialog" aria-modal="true" aria-labelledby="calendar-modal-title">
+            <button type="button" class="calendar-modal-close" id="calendar-close" aria-label="Close calendar">✕</button>
+            <div class="calendar-modal-header">
+                <h3 id="calendar-modal-title">Book an Implementation Call</h3>
+                <p>Pick a time that works for you.</p>
+            </div>
+            <div class="calendar-modal-body">
+                <iframe id="calendar-iframe" title="Book a Call" src="about:blank" loading="lazy"></iframe>
+            </div>
         </div>
     </div>
 

@@ -66,7 +66,7 @@ const CONFIG = {
             basePrice: 997,
 
             // NEW: Optional range (kept same min/max by default, can be adjusted later)
-            basePriceRange: { min: 997, max: 997 },
+            basePriceRange: { min: 127, max: 997 },
 
             category: 'ghl',
             isMonthly: true,
@@ -207,11 +207,12 @@ const CONFIG = {
     // ==================== ADDONS (Step 6) ====================
     // Fully updated technical add-ons based on [cite: 22]
     ADDONS: [
-        { id: 'api_integration', name: 'Custom API/Webhook', description: 'We make the impossible possible. Custom bridges for your data.', icon: '🔗', price: 497, priceRange: { min: 497, max: 497 } },
-        { id: 'snapshot_creation', name: 'Snapshot Creation', description: 'Package your setup into a deployable asset you can sell.', icon: '📸', price: 297, priceRange: { min: 297, max: 297 } },
+        // BEST PRACTICE: Put high-urgency upsells first so they show above any "View More" cutoff.
+        // BOSS REQUEST: Move Rush Delivery to upper side + change label to 48–72 hours.
+        { id: 'rush_delivery', name: 'Rush Delivery (48–72h)', description: 'We clear our schedule to launch your project yesterday.', icon: '⚡', price: 300, priceRange: { min: 300, max: 300 } },
 
-        // UPDATED per your request: rush delivery should be +300
-        { id: 'rush_delivery', name: 'Rush Delivery (48h)', description: 'We clear our schedule to launch your project yesterday.', icon: '⚡', price: 300, priceRange: { min: 300, max: 300 } },
+        { id: 'snapshot_creation', name: 'Snapshot Creation', description: 'Package your setup into a deployable asset you can sell.', icon: '📸', price: 297, priceRange: { min: 297, max: 297 } },
+        { id: 'api_integration', name: 'Custom API/Webhook', description: 'We make the impossible possible. Custom bridges for your data.', icon: '🔗', price: 497, priceRange: { min: 497, max: 497 } },
 
         { id: 'zoom_handoff', name: 'Live Zoom Handoff', description: '1-on-1 walkthrough to ensure you are 100% confident.', icon: '🎓', price: 147, priceRange: { min: 147, max: 147 } },
         { id: 'hipaa', name: 'Advanced HIPAA Compliance', description: 'Configure GHL for strict medical security standards.', icon: '🛡️', price: 497, priceRange: { min: 497, max: 497 } },
@@ -259,10 +260,14 @@ const CONFIG = {
 
         // NEW: Range-based western anchor rule (calculator can prefer this)
         // Example: if your estimate is 1000–2000, western becomes ~3000–4000.
-        westernAgencyRangeAdder: { min: 2000, max: 2000 },
+        westernAgencyRangeAdder: { min: 340, max: 525 },
+
+        // BEST PRACTICE: Keep marketing anchor as a fixed "comparison range" so UI can display it consistently.
+        // BOSS REQUEST (prep for UI step): typical US-based/on-shore agency comparison range.
+        typicalUSBasedAgencyRange: null,
 
         // NEW: Monthly management adder (+127) when monthly_management is selected
-        monthlyManagementAdder: 127,
+        monthlyManagementAdder: 0,
 
         // NEW: Capabilities included (no extra price) when specific service selected
         includedCapabilitiesByService: {

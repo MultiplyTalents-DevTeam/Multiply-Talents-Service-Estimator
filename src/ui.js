@@ -279,7 +279,7 @@ class UIHandler {
             serviceCard.className = `service-card ${isSelected ? 'selected' : ''} ${hasRecommendedBadge ? 'recommended' : ''}`;
             serviceCard.onclick = () => this.state.toggleService(service.id);
 
-            // NEW: show range badge (small) but keep structure stable
+            // Keep structure stable, but hide price on Step 1 cards
             const baseRangeText = this.getServiceBaseDisplay(service);
 
             serviceCard.innerHTML = `
@@ -288,7 +288,7 @@ class UIHandler {
                     ${hasRecommendedBadge ? '<div class="recommended-badge">🔥 Most Popular</div>' : ''}
                     <h3>${service.name}</h3>
                     <p>${service.description}</p>
-                    <div class="service-range-hint">${baseRangeText}${service.isMonthly ? '<span class="price-period">/month</span>' : ''}</div>
+                    <div class="service-range-hint" style="display:none;">${baseRangeText}${service.isMonthly ? '<span class="price-period">/month</span>' : ''}</div>
                 </div>
                 <div class="selection-indicator">
                     <div class="selection-dot"></div>
@@ -849,9 +849,11 @@ class UIHandler {
             ? this.formatRangeOrNumber(quote.finalTotalRange, quote.finalTotal)
             : `$${this.calculator.formatNumber(quote.finalTotal)}`;
 
-        const westernDisplay = quote.westernAgencyPriceRange
-            ? this.formatRangeOrNumber(quote.westernAgencyPriceRange, quote.westernAgencyPrice)
-            : `$${this.calculator.formatNumber(quote.westernAgencyPrice)}`;
+        const westernDisplay = (this.config.PRICING_RULES && this.config.PRICING_RULES.typicalUSBasedAgencyRange)
+            ? this.formatRangeOrNumber(this.config.PRICING_RULES.typicalUSBasedAgencyRange, quote.westernAgencyPrice)
+            : (quote.westernAgencyPriceRange
+                ? this.formatRangeOrNumber(quote.westernAgencyPriceRange, quote.westernAgencyPrice)
+                : `$${this.calculator.formatNumber(quote.westernAgencyPrice)}`);
 
         return `
             <div class="invoice-totals">
@@ -894,9 +896,9 @@ class UIHandler {
                 </div>
 
                 <div class="price-anchor">
-                    <div class="anchor-label">💎 Western Agency Value</div>
+                    <div class="anchor-label">💎 On Shore Agency Value</div>
                     <div class="anchor-value">${westernDisplay}</div>
-                    <div class="anchor-note">Estimated range from a typical US-based agency</div>
+                    <div class="anchor-note">Estimated range from a typical US-based agency in your country</div>
                 </div>
             </div>
         `;

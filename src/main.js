@@ -16,6 +16,13 @@ class ServiceEstimatorApp {
         this.eventHandlers = new Map();
         this.lastStep = null;
         this.lastServices = [];
+
+        // Calendar modal state (optional)
+        this.shouldShowCalendarAfterSubmit = false;
+        this.isCalendarOpen = false;
+        this._escHandler = (e) => {
+            if (e.key === 'Escape') this.closeCalendarModal();
+        };
         
         // GHL-specific setup
         this.setupGHLCompatibility();
@@ -184,11 +191,61 @@ class ServiceEstimatorApp {
             const checkbox = document.getElementById('video-checkbox');
             if (checkbox) checkbox.classList.toggle('checked', !currentWantsVideo);
         });
+
+        // Book Call button (opens calendar modal if markup exists)
+        const bookBtn = document.querySelector('.form-divider .btn.btn-outline');
+        if (bookBtn) {
+            bookBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.shouldShowCalendarAfterSubmit = true;
+                this.openCalendarModal();
+            });
+        }
+
+        // Close modal triggers (if markup exists)
+        this.delegateClick('[data-calendar-close]', (e) => {
+            e.preventDefault();
+            this.closeCalendarModal();
+        });
+
+        this.delegateClick('#calendar-modal', (e, el) => {
+            // Click backdrop closes if you use #calendar-modal as the backdrop container
+            if (e.target === el) this.closeCalendarModal();
+        });
         
         const quoteForm = document.getElementById('quote-form');
         if (quoteForm) {
             quoteForm.addEventListener('submit', (e) => this.handleQuoteSubmission(e));
         }
+    }
+
+    // ==================== CALENDAR MODAL ====================
+    openCalendarModal() {
+        const modal = document.getElementById('calendar-modal');
+        if (!modal) return;
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+
+        if (!this.isCalendarOpen) {
+            document.addEventListener('keydown', this._escHandler);
+        }
+        this.isCalendarOpen = true;
+    }
+
+    closeCalendarModal() {
+        const modal = document.getElementById('calendar-modal');
+        if (!modal) return;
+
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+
+        if (this.isCalendarOpen) {
+            document.removeEventListener('keydown', this._escHandler);
+        }
+        this.isCalendarOpen = false;
     }
 
     // ==================== QUOTE SUBMISSION ====================
@@ -224,6 +281,12 @@ class ServiceEstimatorApp {
             const result = await this.ghl.submitQuote(contactData, quoteData, this.state);
             if (result.success) {
                 this.showSuccessScreen();
+
+                // Optional: auto-open calendar after submit if user clicked "Book Call" first
+                if (this.shouldShowCalendarAfterSubmit) {
+                    setTimeout(() => this.openCalendarModal(), 150);
+                }
+
                 setTimeout(() => this.state.reset(), 3000);
             } else {
                 throw new Error(result.error || 'Submission failed');

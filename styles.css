@@ -855,14 +855,19 @@ body {
 .total-display {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
+    gap: 1rem;
 }
 
 .total-amount {
-    font-size: 2rem;
+    font-size: clamp(1.35rem, 2.2vw, 2rem);
     font-weight: 900;
     color: var(--accent-primary);
     font-variant-numeric: tabular-nums;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    align-self: center;
 }
 
 .total-period {
@@ -1048,10 +1053,12 @@ body {
 }
 
 .total-value.grand {
-    font-size: 2.5rem;
+    font-size: clamp(1.8rem, 2.8vw, 2.5rem);
     font-weight: 900;
     color: var(--accent-primary);
     letter-spacing: -0.02em;
+    line-height: 1.05;
+    white-space: nowrap;
 }
 
 /* ========================================
@@ -1500,7 +1507,7 @@ body {
     }
 
     .total-value.grand {
-        font-size: 2rem;
+        font-size: clamp(1.6rem, 7vw, 2rem);
     }
 
     .quote-form {
@@ -1508,7 +1515,13 @@ body {
     }
 
     .total-amount {
-        font-size: 1.5rem;
+        font-size: clamp(1.25rem, 6vw, 1.6rem);
+    }
+
+    .total-row:last-child {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
     }
 
     .estimator-sidebar {
@@ -1638,6 +1651,30 @@ body {
     opacity: 0.6;
     pointer-events: none;
 }
+
+/* Submit-only loading overlay (real network request) */
+#estimator-app.loading {
+    position: relative;
+    cursor: progress;
+}
+
+#estimator-app.loading::after {
+    content: 'Submitting...';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--accent-primary);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(2px);
+    border-radius: inherit;
+    letter-spacing: 0.01em;
+    z-index: 999;
+}
+
 
 /* Number Counter Animation */
 @keyframes countUp {
@@ -1933,10 +1970,10 @@ body {
 }
 
 .anchor-value {
-  margin-top: 0.35rem;
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--accent-primary);
+  margin-top: 0.35rem; display: inline-block; padding: 0.15rem 0.55rem; border-radius: 8px;
+  font-size: 1.5rem; background: transparent;
+  font-weight: 900; text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: #dc3545;
+  color: #dc3545;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1997,8 +2034,8 @@ body {
 
 .timeline-value {
   margin-top: 0.25rem;
-  font-size: 1rem;
-  font-weight: 900;
+  font-size: 0.9375rem;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
@@ -2081,5 +2118,3 @@ body {
     font-size: 1.25rem;
   }
 }
-
-

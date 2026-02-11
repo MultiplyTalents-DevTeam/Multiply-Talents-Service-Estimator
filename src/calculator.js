@@ -221,12 +221,13 @@ class Calculator {
             if (config.addons) allSelectedItems.push(...config.addons);
         });
 
-        // NEW: Monthly Management adder (+127) when monthly_management selected
-        const monthlyAdder = this.config.PRICING_RULES?.monthlyManagementAdder || 0;
+        // NEW: Monthly Management adder (range) when monthly_management selected
+        const monthlyAdderRange = this._normalizeRange(this.config.PRICING_RULES?.monthlyManagementAdder, 0);
+        const monthlyAdderLegacy = this._pickLegacyNumberFromRange(monthlyAdderRange, 'max');
         const hasMonthlyManagement = selectedServices.includes('monthly_management');
-        if (hasMonthlyManagement && monthlyAdder > 0) {
-            subtotal += monthlyAdder;
-            subtotalRange = this._addRange(subtotalRange, this._toRange(monthlyAdder, 0));
+        if (hasMonthlyManagement && (monthlyAdderRange.min > 0 || monthlyAdderRange.max > 0)) {
+            subtotal += monthlyAdderLegacy;
+            subtotalRange = this._addRange(subtotalRange, monthlyAdderRange);
         }
 
         // 1. Detect Bundles and calculate savings
