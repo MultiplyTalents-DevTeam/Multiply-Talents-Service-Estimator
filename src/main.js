@@ -7,7 +7,9 @@ class ServiceEstimatorApp {
     constructor() {
         // Initialize modules - Assumes these are global instances from your other files
         this.state = estimatorState;
-        this.ui = uiHandler;
+        this.ui = (typeof window !== 'undefined' && window.uiHandler)
+            ? window.uiHandler
+            : (typeof uiHandler !== 'undefined' ? uiHandler : null);
         this.calculator = calculator;
         this.ghl = ghlIntegration;
         

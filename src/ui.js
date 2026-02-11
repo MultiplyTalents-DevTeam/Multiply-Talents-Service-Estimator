@@ -168,11 +168,86 @@ class UIHandler {
 
     // ==================== STEP NAVIGATION ====================
     goToStep(stepId) {
-        if (this.state.validateStep(stepId) || stepId === 'services' || stepId === 'review') {
+        // Determine direction to avoid validating the *target* step on forward navigation
+        const currentIndex = this.config.STEPS.findIndex(s => s.id === this.state.currentStep);
+        const targetIndex = this.config.STEPS.findIndex(s => s.id === stepId);
+        const isForward = targetIndex > currentIndex;
+
+        if (isForward) {
+            // Validate the CURRENT step before moving forward
+            if (this.state.validateStep(this.state.currentStep)) {
+                this.showStep(stepId);
+            } else {
+                this.showValidationError(this.state.currentStep);
+            }
+            return;
+        }
+
+        // Back navigation (or jumps to completed steps)
+        this.showStep(stepId);
+    }
+
+    showStep(stepId) {
+        // Avoid double-updates if caller already set it
+        if (this.state.currentStep !== stepId) {
             this.state.update({ currentStep: stepId });
         } else {
-            this.showValidationError(stepId);
+            // Still ensure visibility + scroll behavior
+            this.showCurrentStep();
         }
+
+        // Auto-scroll to top on step transitions
+        this.scrollToTop();
+    }
+
+    scrollToTop() {
+        const prefersReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        const behavior = prefersReduced ? 'auto' : 'smooth';
+
+        // 1) Scroll the window (works for most GHL embeds)
+        try {
+            window.scrollTo({ top: 0, behavior });
+        } catch (e) {
+            window.scrollTo(0, 0);
+        }
+
+        // 2) Scroll the main app container (if it’s the scroll parent)
+        const app = this.elements.app || document.getElementById('estimator-app');
+        if (app && typeof app.scrollTop === 'number') app.scrollTop = 0;
+
+        // 3) Scroll the active step container (belt + suspenders)
+        const activeStep = document.querySelector('.step-content.active');
+        if (activeStep && typeof activeStep.scrollTop === 'number') activeStep.scrollTop = 0;
+    }
+
+    showLoading(isLoading, message = 'Submitting...') {
+        // Toggle a global loading state
+        const app = this.elements.app || document.getElementById('estimator-app') || document.body;
+        document.body.classList.toggle('is-loading', !!isLoading);
+        if (app) app.classList.toggle('is-loading', !!isLoading);
+
+        // Create overlay once
+        let overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            overlay.className = 'loading-overlay';
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.innerHTML = `
+                <div class="loading-panel" role="status" aria-live="polite">
+                    <div class="loading-spinner" aria-hidden="true"></div>
+                    <div class="loading-text"></div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        const textEl = overlay.querySelector('.loading-text');
+        if (textEl) textEl.textContent = message;
+
+        overlay.classList.toggle('active', !!isLoading);
+        overlay.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+        document.body.setAttribute('aria-busy', isLoading ? 'true' : 'false');
     }
 
     showCurrentStep() {
@@ -191,6 +266,9 @@ class UIHandler {
     showValidationError(stepId) {
         let message = '';
         switch (stepId) {
+            case 'services':
+                message = 'Please select at least one service before continuing.';
+                break;
             case 'scope':
                 message = 'Please select both your industry and business scale before continuing.';
                 break;
