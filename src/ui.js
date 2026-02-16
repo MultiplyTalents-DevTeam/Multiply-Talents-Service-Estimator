@@ -21,6 +21,123 @@ class UIHandler {
         this.updateUI();
     }
 
+    // ==================== ICON HELPERS (FONT AWESOME) ====================
+    // Best practice: accept config-provided FA classes (if you later store them in CONFIG),
+    // but otherwise always use UI fallbacks (no emoji rendering).
+    fa(iconClass, extraClass = '') {
+        const cls = `${iconClass} ${extraClass}`.trim();
+        return `<i class="${cls}" aria-hidden="true"></i>`;
+    }
+
+    // If config provides an SVG or FA class string, render it; otherwise fallback to our mapped FA icon
+    renderIconFromConfigOrFallback(configIconValue, fallbackFaClass) {
+        const raw = (typeof configIconValue === 'string') ? configIconValue.trim() : '';
+
+        // Allow inline SVG markup if you ever switch to that style
+        if (raw.startsWith('<svg') || raw.startsWith('<span') || raw.startsWith('<i')) return raw;
+
+        // Allow FA classes if you decide to store them in CONFIG later
+        if (raw.includes('fa-')) return this.fa(raw);
+
+        // No emoji rendering: always fallback to FA
+        return this.fa(fallbackFaClass);
+    }
+
+    getServiceIcon(serviceIdOrObj) {
+        const id = typeof serviceIdOrObj === 'string' ? serviceIdOrObj : serviceIdOrObj?.id;
+
+        const map = {
+            new_ghl_setup: 'fa-solid fa-rocket',
+            platform_migration: 'fa-solid fa-right-left',
+            fix_optimize: 'fa-solid fa-screwdriver-wrench',
+            monthly_management: 'fa-solid fa-calendar-check'
+        };
+
+        const fallback = map[id] || 'fa-solid fa-briefcase';
+        const cfgIcon = (typeof serviceIdOrObj === 'object') ? serviceIdOrObj?.icon : (this.config.SERVICES?.[id]?.icon);
+        return this.renderIconFromConfigOrFallback(cfgIcon, fallback);
+    }
+
+    getCapabilityIcon(capIdOrObj) {
+        const id = typeof capIdOrObj === 'string' ? capIdOrObj : capIdOrObj?.id;
+
+        const map = {
+            funnels: 'fa-solid fa-layer-group',
+            crm: 'fa-solid fa-users',
+            workflow_automation: 'fa-solid fa-gears',
+
+            data_migration: 'fa-solid fa-database',
+            workflow_transfer: 'fa-solid fa-arrows-rotate',
+
+            audit: 'fa-solid fa-magnifying-glass',
+            optimization: 'fa-solid fa-chart-line',
+            bug_fixes: 'fa-solid fa-bug',
+
+            campaign_launches: 'fa-solid fa-rocket',
+            tech_support: 'fa-solid fa-headset',
+            reporting: 'fa-solid fa-chart-pie',
+
+            reputation_management: 'fa-solid fa-star',
+            social_media_planner: 'fa-solid fa-calendar-days',
+            calendar: 'fa-solid fa-calendar-days'
+        };
+
+        const fallback = map[id] || 'fa-solid fa-circle-nodes';
+        const cfgIcon = (typeof capIdOrObj === 'object') ? capIdOrObj?.icon : (this.config.CAPABILITIES?.[id]?.icon);
+        return this.renderIconFromConfigOrFallback(cfgIcon, fallback);
+    }
+
+    getIndustryIcon(industryIdOrObj) {
+        const id = typeof industryIdOrObj === 'string' ? industryIdOrObj : industryIdOrObj?.id;
+
+        const map = {
+            home_services: 'fa-solid fa-toolbox',
+            ecommerce: 'fa-solid fa-cart-shopping',
+            elearning_coaches: 'fa-solid fa-graduation-cap',
+            medical_dental: 'fa-solid fa-stethoscope',
+            agency_saas: 'fa-solid fa-briefcase',
+            other: 'fa-solid fa-shapes'
+        };
+
+        const fallback = map[id] || 'fa-solid fa-building';
+        const cfgIcon = (typeof industryIdOrObj === 'object') ? industryIdOrObj?.icon : (this.config.INDUSTRIES?.find(i => i.id === id)?.icon);
+        return this.renderIconFromConfigOrFallback(cfgIcon, fallback);
+    }
+
+    getScaleIcon(scaleIdOrObj) {
+        const id = typeof scaleIdOrObj === 'string' ? scaleIdOrObj : scaleIdOrObj?.id;
+
+        const map = {
+            solopreneur: 'fa-solid fa-user',
+            growing: 'fa-solid fa-seedling',
+            scale: 'fa-solid fa-chart-line',
+            enterprise: 'fa-solid fa-building-columns'
+        };
+
+        const fallback = map[id] || 'fa-solid fa-chart-simple';
+        const cfgIcon = (typeof scaleIdOrObj === 'object') ? scaleIdOrObj?.icon : (this.config.BUSINESS_SCALES?.find(s => s.id === id)?.icon);
+        return this.renderIconFromConfigOrFallback(cfgIcon, fallback);
+    }
+
+    getAddonIcon(addonIdOrObj) {
+        const id = typeof addonIdOrObj === 'string' ? addonIdOrObj : addonIdOrObj?.id;
+
+        const map = {
+            rush_delivery: 'fa-solid fa-bolt',
+            snapshot_creation: 'fa-solid fa-box-archive',
+            api_integration: 'fa-solid fa-code',
+            zoom_handoff: 'fa-solid fa-video',
+            hipaa: 'fa-solid fa-shield-halved',
+            ab_testing: 'fa-solid fa-flask',
+            custom_css: 'fa-solid fa-paintbrush',
+            email_audit: 'fa-solid fa-envelope-open-text'
+        };
+
+        const fallback = map[id] || 'fa-solid fa-plus';
+        const cfgIcon = (typeof addonIdOrObj === 'object') ? addonIdOrObj?.icon : (this.config.ADDONS?.find(a => a.id === id)?.icon);
+        return this.renderIconFromConfigOrFallback(cfgIcon, fallback);
+    }
+
     // ==================== ELEMENT CACHING ====================
     cacheElements() {
         this.elements = {
@@ -351,7 +468,7 @@ class UIHandler {
 
             stepElement.innerHTML = `
                 <div class="${circleClass}">
-                    ${index < currentStepIndex ? '✓' : step.number}
+                    ${index < currentStepIndex ? this.fa('fa-solid fa-check') : step.number}
                 </div>
                 <span class="${labelClass}">${step.label}</span>
             `;
@@ -387,10 +504,12 @@ class UIHandler {
             // Keep structure stable, but hide price on Step 1 cards
             const baseRangeText = this.getServiceBaseDisplay(service);
 
+            const serviceIcon = this.getServiceIcon(service);
+
             serviceCard.innerHTML = `
-                <div class="service-icon">${service.icon}</div>
+                <div class="service-icon">${serviceIcon}</div>
                 <div class="service-content">
-                    ${hasRecommendedBadge ? '<div class="recommended-badge">🔥 Most Popular</div>' : ''}
+                    ${hasRecommendedBadge ? '<div class="recommended-badge"><i class="fa-solid fa-fire" aria-hidden="true"></i> Most Popular</div>' : ''}
                     <h3>${service.name}</h3>
                     <p>${service.description}</p>
                     <div class="service-range-hint" style="display:none;">${baseRangeText}${service.isMonthly ? '<span class="price-period">/month</span>' : ''}</div>
@@ -416,20 +535,20 @@ class UIHandler {
         // Render the body content
         body.innerHTML = `
             <div class="help-banner">
-                <span class="help-banner-icon">ℹ️</span>
+                <span class="help-banner-icon">${this.fa('fa-solid fa-circle-info')}</span>
                 <div class="help-banner-content">
                     <p>These settings apply to <strong>all selected services</strong> and help us tailor the setup to your needs.</p>
                 </div>
             </div>
 
             <div class="tab-section">
-                <h3>🏢 What industry are you in?</h3>
+                <h3>${this.fa('fa-solid fa-building')} What industry are you in?</h3>
                 <p>This helps us customize templates and workflows for your business</p>
                 <div class="config-grid three-col" id="industry-grid"></div>
             </div>
 
             <div class="tab-section">
-                <h3>📊 What's your business scale?</h3>
+                <h3>${this.fa('fa-solid fa-chart-line')} What's your business scale?</h3>
                 <p>Understanding your size helps us scope the project correctly</p>
                 <div class="config-grid" id="scale-grid"></div>
             </div>
@@ -460,8 +579,10 @@ class UIHandler {
                 });
             };
 
+            const industryIcon = this.getIndustryIcon(industry);
+
             option.innerHTML = `
-                <span class="option-icon">${industry.icon}</span>
+                <span class="option-icon">${industryIcon}</span>
                 <div class="option-title">${industry.name}</div>
             `;
 
@@ -488,8 +609,10 @@ class UIHandler {
                 });
             };
 
+            const scaleIcon = this.getScaleIcon(scale);
+
             option.innerHTML = `
-                <span class="option-icon">${scale.icon}</span>
+                <span class="option-icon">${scaleIcon}</span>
                 <div class="option-title">${scale.name}</div>
                 <div class="option-description">${scale.description}</div>
                 ${scale.adder > 0 ? `<div class="option-price">+$${scale.adder}</div>` : ''}
@@ -513,7 +636,7 @@ class UIHandler {
 
         body.innerHTML = `
             <div class="help-banner" style="margin: 0; border-radius: 0;">
-                <span class="help-banner-icon">🎯</span>
+                <span class="help-banner-icon">${this.fa('fa-solid fa-bullseye')}</span>
                 <div class="help-banner-content">
                     <p>Use the tabs below to configure each service. Your progress is saved automatically as you go.</p>
                 </div>
@@ -549,8 +672,10 @@ class UIHandler {
             tab.dataset.serviceId = serviceId;
             tab.onclick = () => this.activateTab(serviceId);
 
+            const serviceIcon = this.getServiceIcon(service);
+
             tab.innerHTML = `
-                <span class="tab-icon">${service.icon}</span>
+                <span class="tab-icon">${serviceIcon}</span>
                 <span>${service.name}</span>
                 ${completionCount > 0 ? `<span class="tab-badge">${completionCount}/${totalSteps}</span>` : ''}
             `;
@@ -595,19 +720,19 @@ class UIHandler {
                 </div>
 
                 <div class="tab-section">
-                    <h3>🎯 Select Capabilities</h3>
+                    <h3>${this.fa('fa-solid fa-bullseye')} Select Capabilities</h3>
                     <p>Choose what you need for ${service.name}</p>
                     <div class="config-grid" id="capabilities-${serviceId}"></div>
                 </div>
 
                 <div class="tab-section">
-                    <h3>⭐ Choose Service Level</h3>
+                    <h3>${this.fa('fa-solid fa-star')} Choose Service Level</h3>
                     <p>Select your preferred level of support</p>
                     <div class="config-grid three-col" id="levels-${serviceId}"></div>
                 </div>
 
                 <div class="tab-section">
-                    <h3>➕ Add-ons (Optional)</h3>
+                    <h3>${this.fa('fa-solid fa-plus')} Add-ons (Optional)</h3>
                     <p>Enhance your service with optional add-ons</p>
                     <div class="config-grid" id="addons-${serviceId}"></div>
                 </div>
@@ -660,8 +785,10 @@ class UIHandler {
                 this.state.updateServiceConfig(serviceId, newConfig);
             };
 
+            const capIcon = this.getCapabilityIcon(capability);
+
             option.innerHTML = `
-                <span class="option-icon">${capability.icon}</span>
+                <span class="option-icon">${capIcon}</span>
                 <div class="option-title">
                     ${capability.name}
                     ${isIncluded ? '<span class="included-badge">Included</span>' : ''}
@@ -696,13 +823,13 @@ class UIHandler {
             };
 
             option.innerHTML = `
-                ${level.popular ? '<div class="popular-badge">Most Popular</div>' : ''}
+                ${level.popular ? '<div class="popular-badge"><i class="fa-solid fa-fire" aria-hidden="true"></i> Most Popular</div>' : ''}
                 <div class="option-title">${level.name}</div>
                 <div class="option-description">${level.description}</div>
                 <div style="margin-top: 0.75rem;">
                     ${level.features.slice(0, 3).map(feature => `
                         <div style="display: flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
-                            <span style="color: var(--accent-gold);">✓</span>
+                            <span style="color: var(--accent-gold);"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
                             <span>${feature}</span>
                         </div>
                     `).join('')}
@@ -750,8 +877,10 @@ class UIHandler {
                 ? this.calculator.formatCurrencyRange(addon.priceRange)
                 : `+$${this.calculator.formatNumber(addon.price)}`;
 
+            const addonIcon = this.getAddonIcon(addon);
+
             option.innerHTML = `
-                <span class="option-icon">${addon.icon}</span>
+                <span class="option-icon">${addonIcon}</span>
                 <div class="option-title">${addon.name}</div>
                 <div class="option-description">${addon.description}</div>
                 <div class="option-price">${addonDisplay}</div>
@@ -774,7 +903,7 @@ class UIHandler {
             };
 
             viewMoreOption.innerHTML = `
-                <span class="option-icon">➕</span>
+                <span class="option-icon"><i class="fa-solid fa-plus" aria-hidden="true"></i></span>
                 <div class="option-title">View More Add-ons</div>
                 <div class="option-description">See ${this.config.ADDONS.length - 4} more technical enhancements</div>
             `;
@@ -819,7 +948,7 @@ class UIHandler {
 
         body.innerHTML = `
             <div class="help-banner">
-                <span class="help-banner-icon">✨</span>
+                <span class="help-banner-icon">${this.fa('fa-solid fa-circle-check')}</span>
                 <div class="help-banner-content">
                     <p><strong>Almost there!</strong> Review your selections below. You can go back to make changes anytime.</p>
                 </div>
@@ -869,14 +998,14 @@ class UIHandler {
                 <div class="scope-grid">
                     ${industry ? `
                         <div class="scope-item">
-                            <div class="scope-label">🏢 Industry</div>
+                            <div class="scope-label">${this.fa('fa-solid fa-building')} Industry</div>
                             <div class="scope-value">${industry.name}</div>
                             ${industry.multiplier > 1 ? `<div class="scope-note">${Math.round((industry.multiplier - 1) * 100)}% complexity adjustment</div>` : ''}
                         </div>
                     ` : ''}
                     ${scale ? `
                         <div class="scope-item">
-                            <div class="scope-label">📊 Business Scale</div>
+                            <div class="scope-label">${this.fa('fa-solid fa-chart-line')} Business Scale</div>
                             <div class="scope-value">${scale.name}</div>
                             ${scale.adder > 0 ? `<div class="scope-note">+$${scale.adder} scale adjustment</div>` : ''}
                         </div>
@@ -904,11 +1033,13 @@ class UIHandler {
             ? this.formatRangeOrNumber(service.subtotalRange, service.subtotal)
             : `$${this.calculator.formatNumber(service.subtotal)}`;
 
+        const serviceIcon = this.getServiceIcon(serviceConfig);
+
         return `
             <div class="invoice-service">
                 <div class="service-header">
                     <div class="service-title">
-                        <span class="service-icon">${serviceConfig.icon}</span>
+                        <span class="service-icon">${serviceIcon}</span>
                         <h4>${service.serviceName}</h4>
                         ${service.isMonthly ? '<span class="monthly-badge">Monthly</span>' : ''}
                     </div>
@@ -977,7 +1108,7 @@ class UIHandler {
 
                     ${quote.appliedBundles.length > 0 ? `
                         <div class="bundle-savings">
-                            <div class="bundle-savings-title">✨ Applied Growth Packages:</div>
+                            <div class="bundle-savings-title"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Applied Growth Packages:</div>
                             ${quote.appliedBundles.map(bundle => `
                                 <div class="bundle-item">
                                     <span>${bundle.name}</span>
@@ -1001,7 +1132,7 @@ class UIHandler {
                 </div>
 
                 <div class="price-anchor">
-                    <div class="anchor-label">💎 On Shore Agency Value</div>
+                    <div class="anchor-label"><i class="fa-solid fa-gem" aria-hidden="true"></i> On Shore Agency Value</div>
                     <div class="anchor-value">${westernDisplay}</div>
                     <div class="anchor-note">Estimated range from a typical US-based agency in your country</div>
                 </div>
@@ -1012,17 +1143,17 @@ class UIHandler {
     renderTimelineInfo(timeline, deliveryDate) {
         return `
             <div class="timeline-section">
-                <h3>📅 Estimated Timeline</h3>
+                <h3><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Estimated Timeline</h3>
                 <div class="timeline-content">
                     <div class="timeline-item">
-                        <div class="timeline-icon">⏱️</div>
+                        <div class="timeline-icon"><i class="fa-solid fa-clock" aria-hidden="true"></i></div>
                         <div>
                             <div class="timeline-label">Project Duration</div>
                             <div class="timeline-value">${timeline} business days</div>
                         </div>
                     </div>
                     <div class="timeline-item">
-                        <div class="timeline-icon">📅</div>
+                        <div class="timeline-icon"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i></div>
                         <div>
                             <div class="timeline-label">Estimated Delivery</div>
                             <div class="timeline-value">${deliveryDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
@@ -1093,16 +1224,17 @@ class UIHandler {
             : `
                 <div class="services-list">
                     <div class="services-header">
-                        <span>🧩</span>
+                        <span><i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i></span>
                         <span>Services (${this.state.selectedServices.length})</span>
                     </div>
                     ${this.state.selectedServices.map(id => {
                         const s = this.config.SERVICES[id];
                         const baseDisplay = this.getServiceBaseDisplay(s);
+                        const serviceIcon = this.getServiceIcon(s);
                         return `
                             <div class="service-item">
                                 <span class="service-name">
-                                    <span>${s.icon}</span>
+                                    <span>${serviceIcon}</span>
                                     <span>${s.name}</span>
                                 </span>
                                 <span class="service-price">${baseDisplay}${s.isMonthly ? '<span class="price-period">/mo</span>' : ''}</span>
@@ -1116,13 +1248,13 @@ class UIHandler {
             <div class="summary-details">
                 ${this.state.commonConfig.industry ? `
                     <div class="detail-item">
-                        <span class="detail-label">🏢 Industry</span>
+                        <span class="detail-label"><i class="fa-solid fa-building" aria-hidden="true"></i> Industry</span>
                         <span class="detail-value">${this.config.INDUSTRIES.find(i => i.id === this.state.commonConfig.industry)?.name}</span>
                     </div>
                 ` : ''}
                 ${this.state.commonConfig.scale ? `
                     <div class="detail-item">
-                        <span class="detail-label">📊 Scale</span>
+                        <span class="detail-label"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Scale</span>
                         <span class="detail-value">${this.config.BUSINESS_SCALES.find(s => s.id === this.state.commonConfig.scale)?.name}</span>
                     </div>
                 ` : ''}
@@ -1178,7 +1310,7 @@ class UIHandler {
 
             container.innerHTML = `
                 <div class="bundles-header">
-                    <span>✨</span>
+                    <span><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i></span>
                     <span>Applied Growth Packages</span>
                 </div>
                 ${this.state.appliedBundles.map(bundle => `

@@ -1478,7 +1478,7 @@ body {
     }
 
     .step-body {
-        padding: 1.5rem;
+        padding: 1.25rem;
     }
 
     .step-footer {
@@ -1505,7 +1505,7 @@ body {
     }
 
     .invoice-card {
-        padding: 1.5rem;
+        padding: 1.25rem;
     }
 
     .invoice-header {
@@ -1523,6 +1523,8 @@ body {
 
     .total-value.grand {
         font-size: clamp(1.6rem, 7vw, 2rem);
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 
     .quote-form {
@@ -1533,7 +1535,7 @@ body {
         font-size: clamp(1.25rem, 6vw, 1.6rem);
     }
 
-    .total-row:last-child {
+    .total-row.grand-total {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.35rem;
@@ -1569,6 +1571,40 @@ body {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
+    }
+
+    /* Hide hover tooltips on mobile to prevent cramped cards */
+    .service-card::after,
+    .config-option::after,
+    .video-option::after {
+        content: none;
+    }
+}
+
+/* ========================================
+   MOBILE LANDSCAPE OPTIMIZATION
+======================================== */
+@media (max-width: 1023px) and (orientation: landscape) {
+    .estimator-layout {
+        grid-template-columns: 1fr 360px;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .estimator-sidebar {
+        order: 2;
+    }
+
+    .estimator-main {
+        order: 1;
+    }
+
+    .services-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .config-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -2118,15 +2154,41 @@ body {
 /* ---------- Mobile spacing tweaks for Step 4 ---------- */
 @media (max-width: 768px) {
   .invoice-card {
-    padding: 1.5rem;
+    padding: 1.25rem;
   }
 
   .invoice-service {
     padding: 1rem;
   }
 
+  .service-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoice-totals {
+    padding: 1.25rem;
+  }
+
   .service-price {
     font-size: 1.125rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .breakdown-price {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .pricing-value {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .total-value.grand {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .anchor-value {
