@@ -31,6 +31,9 @@ export default async function handler(req, res) {
       "contact.video_walkthrough",
       "contact.full_quote_json",
       "contact.industry_type",
+      "contact.estimate_range",
+      "contact.estimate_min",
+      "contact.estimate_max",
     ];
 
     const matches = fields

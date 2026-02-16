@@ -39,6 +39,10 @@ class GHLIntegration {
         map[shortKey] = f.id;
       });
 
+      map.estimate_range = map.estimate_range || '625gCcKBwcIMAYGZpnHZ';
+      map.estimate_min = map.estimate_min || 'IlBnWCvgeUGRLw3D3VKd';
+      map.estimate_max = map.estimate_max || 'oLysEdHUKGjoJz70qHZm';
+
       this.fieldIds = map;
       this.assertConfig();
     } catch (e) {
@@ -58,7 +62,10 @@ class GHLIntegration {
       'project_description',
       'video_walkthrough',
       'full_quote_json',
-      'industry_type'
+      'industry_type',
+      'estimate_range',
+      'estimate_min',
+      'estimate_max'
     ];
 
     if (!this.fieldIds) {
@@ -238,6 +245,10 @@ class GHLIntegration {
     if (fieldIds.project_description) customField[fieldIds.project_description] = projectDescription;
     if (fieldIds.video_walkthrough) customField[fieldIds.video_walkthrough] = videoWalkthrough;
     if (fieldIds.full_quote_json) customField[fieldIds.full_quote_json] = fullQuoteJson;
+
+    if (fieldIds.estimate_range) customField[fieldIds.estimate_range] = estimateRange;
+    if (fieldIds.estimate_min) customField[fieldIds.estimate_min] = estimateMin;
+    if (fieldIds.estimate_max) customField[fieldIds.estimate_max] = estimateMax;
 
     // ✅ Friendly keys for workflow mapping (Inbound Webhook "Create Contact" step)
     return {

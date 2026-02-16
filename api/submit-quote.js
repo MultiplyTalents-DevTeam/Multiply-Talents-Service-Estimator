@@ -30,6 +30,9 @@ export default async function handler(req, res) {
     video_walkthrough: "sTW1WxQWwzfz8IPGQ9d2",
     full_quote_json: "a4x5p5ufWzrJnw5WczGo",
     industry_type: "cZ8J3yte2sBvXJOcH4sT",
+    estimate_range: "625gCcKBwcIMAYGZpnHZ",
+    estimate_min: "IlBnWCvgeUGRLw3D3VKd",
+    estimate_max: "oLysEdHUKGjoJz70qHZm",
   };
 
   try {
@@ -140,6 +143,9 @@ export default async function handler(req, res) {
       estimated_investment: body.estimated_investment ?? customField?.[FIELD.estimated_investment] ?? 0,
       bundle_discount: body.bundle_discount ?? customField?.[FIELD.bundle_discount] ?? 0,
       final_quote_total: body.final_quote_total ?? customField?.[FIELD.final_quote_total] ?? 0,
+      estimate_range: body.estimate_range ?? customField?.[FIELD.estimate_range] ?? "",
+      estimate_min: body.estimate_min ?? customField?.[FIELD.estimate_min] ?? null,
+      estimate_max: body.estimate_max ?? customField?.[FIELD.estimate_max] ?? null,
       project_description: body.project_description ?? customField?.[FIELD.project_description] ?? "",
       video_walkthrough: body.video_walkthrough ?? customField?.[FIELD.video_walkthrough] ?? "",
       full_quote_json: body.full_quote_json ?? customField?.[FIELD.full_quote_json] ?? "",
