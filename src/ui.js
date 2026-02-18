@@ -1438,10 +1438,14 @@ class UIHandler {
     }
 
     renderInvoiceServices(quote) {
+        const serviceRenderer = this.isMobileViewport()
+            ? (service) => this.renderInvoiceServiceMobile(service)
+            : (service) => this.renderInvoiceService(service);
+
         return `
             <div class="invoice-section">
                 <h3>Selected Services</h3>
-                ${quote.services.map(service => this.renderInvoiceService(service)).join('')}
+                ${quote.services.map(serviceRenderer).join('')}
             </div>
         `;
     }
@@ -1477,7 +1481,7 @@ class UIHandler {
                             const isIncluded = item.included === true || item.amount === 0;
                             return `
                                 <div class="breakdown-item">
-                                    <span class="breakdown-name">• ${item.name}${isIncluded ? ' <span class="included-pill">Included</span>' : ''}</span>
+                                    <span class="breakdown-name">• ${item.name}</span>
                                     <span class="breakdown-price">${isIncluded ? 'Included' : `+$${this.calculator.formatNumber(item.amount)}`}</span>
                                 </div>
                             `;
@@ -1487,6 +1491,55 @@ class UIHandler {
 
                 ${serviceLevel ? `
                     <div class="service-level">
+                        <div class="level-name">${serviceLevel.name} Service Level</div>
+                        ${serviceLevel.adder > 0 ? `<div class="level-price">+$${serviceLevel.adder}</div>` : ''}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    renderInvoiceServiceMobile(service) {
+        const serviceConfig = this.config.SERVICES[service.serviceId];
+        const serviceLevel = this.config.SERVICE_LEVELS.find(
+            l => l.id === this.state.serviceConfigs[service.serviceId]?.serviceLevel
+        );
+
+        const serviceTotalDisplay = service.subtotalRange
+            ? this.formatRangeOrNumber(service.subtotalRange, service.subtotal)
+            : `$${this.calculator.formatNumber(service.subtotal)}`;
+
+        const serviceIcon = this.getServiceIcon(serviceConfig);
+
+        return `
+            <div class="invoice-service invoice-service-mobile">
+                <div class="service-header service-header-mobile">
+                    <div class="service-title">
+                        <span class="service-icon">${serviceIcon}</span>
+                        <h4>${service.serviceName}</h4>
+                    </div>
+                    <div class="service-price">
+                        ${serviceTotalDisplay}
+                        ${service.isMonthly ? '<span class="price-period">/month</span>' : ''}
+                    </div>
+                </div>
+
+                ${service.breakdown.length > 0 ? `
+                    <div class="service-rows">
+                        ${service.breakdown.map(item => {
+                            const isIncluded = item.included === true || item.amount === 0;
+                            return `
+                                <div class="breakdown-item">
+                                    <span class="breakdown-name">&bull; ${item.name}</span>
+                                    <span class="breakdown-price">${isIncluded ? 'Included' : `+$${this.calculator.formatNumber(item.amount)}`}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : ''}
+
+                ${serviceLevel ? `
+                    <div class="service-meta-row">
                         <div class="level-name">${serviceLevel.name} Service Level</div>
                         ${serviceLevel.adder > 0 ? `<div class="level-price">+$${serviceLevel.adder}</div>` : ''}
                     </div>
