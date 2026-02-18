@@ -113,9 +113,11 @@ class ServiceEstimatorApp {
     // ==================== STATE OBSERVERS ====================
     setupStateObservers() {
         // Subscribe UI to state changes
-        this.state.subscribe(() => {
-            if (this.ui.updateUI) this.ui.updateUI();
-        });
+        if (!this.ui || !this.ui.updateUI) {
+            this.state.subscribe(() => {
+                if (this.ui.updateUI) this.ui.updateUI();
+            });
+        }
         
         // Subscribe to analytics
         this.state.subscribe((state) => {
@@ -145,16 +147,21 @@ class ServiceEstimatorApp {
             });
         });
         
-        this.delegateClick('.service-tab', (event, element) => {
-            const serviceId = element.dataset.serviceId;
-            if (serviceId && this.ui.activateTab) this.ui.activateTab(serviceId);
-        });
+        if (!this.ui || !this.ui.activateTab) {
+            this.delegateClick('.service-tab', (event, element) => {
+                const serviceId = element.dataset.serviceId;
+                if (serviceId && this.ui.activateTab) this.ui.activateTab(serviceId);
+            });
+        }
         
         this.setupNavigationListeners();
         this.setupFormListeners();
     }
 
     setupNavigationListeners() {
+        // UIHandler owns navigation + validation (prevents double-navigation handlers)
+        if (this.ui && typeof this.ui.goToStep === 'function') return;
+
         // Navigation Mapping
         const navMap = [
             { id: '#services-continue', next: 'scope', validate: () => this.state.selectedServices.length > 0, msg: 'Please select at least one service.' },
@@ -185,14 +192,17 @@ class ServiceEstimatorApp {
     }
 
     setupFormListeners() {
-        this.onClick('#video-option', () => {
-            const currentWantsVideo = this.state.preferences.wantsVideo;
-            this.state.update({
-                preferences: { ...this.state.preferences, wantsVideo: !currentWantsVideo }
+        // UIHandler owns the video toggle (prevents double-toggle)
+        if (!this.ui || typeof this.ui.toggleVideoOption !== 'function') {
+            this.onClick('#video-option', () => {
+                const currentWantsVideo = this.state.preferences.wantsVideo;
+                this.state.update({
+                    preferences: { ...this.state.preferences, wantsVideo: !currentWantsVideo }
+                });
+                const checkbox = document.getElementById('video-checkbox');
+                if (checkbox) checkbox.classList.toggle('checked', !currentWantsVideo);
             });
-            const checkbox = document.getElementById('video-checkbox');
-            if (checkbox) checkbox.classList.toggle('checked', !currentWantsVideo);
-        });
+        }
 
         // Book Call button (opens calendar modal if markup exists)
         const bookBtn = document.querySelector('.form-divider .btn.btn-outline');

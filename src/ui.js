@@ -13,6 +13,57 @@ class UIHandler {
         this.elements = {};
         this.cacheElements();
 
+        // Step transition state (for fade-out animations)
+        this._isStepTransitioning = false;
+        this._lastRenderedStep = null;
+
+        // ==================== SEE MORE STATE (UI-ONLY) ====================
+        // Best practice: keep expansion state inside UI (not business state) to avoid polluting quote payloads.
+        this._seeMoreState = {};
+        this._expandedIndustries = false;
+        this._expandedAddonsByService = {};
+
+        // Step banner microcopy rotation (3 messages per step)
+        this.stepMicrocopy = {
+            services: [
+                `<strong>Tip:</strong> Start with the services that create the biggest impact first. You can always add more later.`,
+                `<strong>Heads up:</strong> Bundling multiple services can unlock better overall value compared to picking them one by one.`,
+                `<strong>Quick win:</strong> If you're unsure, pick what you need now and we’ll refine the scope during the discovery call.`
+            ],
+            scope: [
+                `<strong>Pro tip:</strong> Your scope selections apply to all chosen services, so pick what matches your real workload.`,
+                `<strong>Clarity check:</strong> If you expect frequent updates, choose the option that covers ongoing support.`,
+                `<strong>Reminder:</strong> Bigger scope usually means longer delivery. Keep it lean if speed matters.`
+            ],
+            details: [
+                `<strong>Almost there:</strong> Add only the details that affect effort. Extra nice-to-haves can be discussed later.`,
+                `<strong>Best practice:</strong> If you don’t have assets yet, select the option that includes guidance or setup help.`,
+                `<strong>Tip:</strong> Prioritize essentials. We’ll make sure the build is clean before adding complexity.`
+            ],
+            review: [
+                `<strong>Review time:</strong> Double-check services and scope so the quote matches what you actually want delivered.`,
+                `<strong>Note:</strong> Pricing reflects effort. If something feels off, we can adjust scope to fit your target.`,
+                `<strong>FYI:</strong> Once you submit, we’ll use this as the baseline for discovery and proposal.`
+            ],
+            contact: [
+                `<strong>Last step:</strong> Make sure your contact info is correct so we can send the proposal fast.`,
+                `<strong>Tip:</strong> Add any deadlines or constraints in the notes. It helps us plan delivery accurately.`,
+                `<strong>Optional:</strong> If you have examples you like, mention them. It speeds up alignment.`
+            ]
+        };
+
+        this.stepMicrocopyCursor = Object.keys(this.stepMicrocopy).reduce((acc, key) => {
+            acc[key] = 0;
+            return acc;
+        }, {});
+
+        this.stepMicrocopyCurrent = {};
+
+        this._microcopyIntervalMs = 6500;
+        this._microcopyTimer = window.setInterval(() => {
+            this.rotateStepMicrocopy(this.state.currentStep);
+        }, this._microcopyIntervalMs);
+
         // Subscribe to state changes
         this.state.subscribe(() => this.updateUI());
 
@@ -91,11 +142,16 @@ class UIHandler {
         const id = typeof industryIdOrObj === 'string' ? industryIdOrObj : industryIdOrObj?.id;
 
         const map = {
+            medical_aesthetics: 'fa-solid fa-spa',
+            private_healthcare: 'fa-solid fa-stethoscope',
             home_services: 'fa-solid fa-toolbox',
-            ecommerce: 'fa-solid fa-cart-shopping',
-            elearning_coaches: 'fa-solid fa-graduation-cap',
-            medical_dental: 'fa-solid fa-stethoscope',
-            agency_saas: 'fa-solid fa-briefcase',
+            education_training: 'fa-solid fa-graduation-cap',
+            real_estate: 'fa-solid fa-house',
+            automotive_services: 'fa-solid fa-car-side',
+            professional_services: 'fa-solid fa-briefcase',
+            legal_firms: 'fa-solid fa-scale-balanced',
+            fitness_training: 'fa-solid fa-dumbbell',
+            food_catering: 'fa-solid fa-utensils',
             other: 'fa-solid fa-shapes'
         };
 
@@ -136,6 +192,120 @@ class UIHandler {
         const fallback = map[id] || 'fa-solid fa-plus';
         const cfgIcon = (typeof addonIdOrObj === 'object') ? addonIdOrObj?.icon : (this.config.ADDONS?.find(a => a.id === id)?.icon);
         return this.renderIconFromConfigOrFallback(cfgIcon, fallback);
+    }
+
+    // ==================== SEE MORE HELPERS ====================
+    // Best practice: UI-only expansion; stopPropagation so it doesn't toggle selection.
+    shouldShowSeeMore(text, threshold = 120) {
+        const t = (typeof text === 'string') ? text.trim() : '';
+        return t.length > threshold;
+    }
+
+    truncateText(text, limit = 110) {
+        const t = (typeof text === 'string') ? text.trim() : '';
+        if (t.length <= limit) return t;
+        return `${t.slice(0, Math.max(0, limit)).trim()}…`;
+    }
+
+    isMobileViewport() {
+        return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    }
+
+    getCollapsedCopyForViewport(text, mobileFallbackLimit = 96) {
+        const t = (typeof text === 'string') ? text.trim() : '';
+        if (!t) return '';
+        if (!this.isMobileViewport()) return this.truncateText(t);
+
+        const firstSentenceMatch = t.match(/^.*?[.!?](?=\s|$)/);
+        if (firstSentenceMatch && firstSentenceMatch[0]) {
+            const firstSentence = firstSentenceMatch[0].trim();
+            if (firstSentence.length <= mobileFallbackLimit) return firstSentence;
+            return this.truncateText(firstSentence, mobileFallbackLimit);
+        }
+
+        return this.truncateText(t, mobileFallbackLimit);
+    }
+
+    getSeeMoreKey(prefix, a, b) {
+        // Stable key for this UI session (persists across re-renders)
+        return `${prefix}:${String(a)}:${String(b)}`;
+    }
+
+    isSeeMoreExpanded(key) {
+        return !!this._seeMoreState[key];
+    }
+
+    setSeeMoreExpanded(key, expanded) {
+        this._seeMoreState[key] = !!expanded;
+    }
+
+    renderSeeMoreToggleHtml(key, expanded) {
+        const label = expanded ? 'See less' : 'See more';
+        const icon = expanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+
+        // Inline styles keep it consistent without requiring CSS changes right now.
+        return `
+            <div class="see-more-toggle"
+                 data-see-more-key="${key}"
+                 role="button"
+                 tabindex="0"
+                 aria-label="${label}"
+                 style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    gap:6px;
+                    margin-top:10px;
+                    padding:6px 8px;
+                    font-size:0.75rem;
+                    color:var(--text-secondary);
+                    cursor:pointer;
+                    user-select:none;
+                 ">
+                <span>${label}</span>
+                <span>${this.fa(icon)}</span>
+            </div>
+        `;
+    }
+
+    bindSeeMoreToggle(rootEl, key, getFullText, getTextEl, getCollapsedText) {
+        if (!rootEl) return;
+        const toggle = rootEl.querySelector(`[data-see-more-key="${key}"]`);
+        if (!toggle) return;
+
+        const activate = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            const full = (typeof getFullText === 'function') ? (getFullText() || '') : '';
+            const expanded = this.isSeeMoreExpanded(key);
+            const nextExpanded = !expanded;
+
+            this.setSeeMoreExpanded(key, nextExpanded);
+
+            const textEl = (typeof getTextEl === 'function') ? getTextEl() : null;
+            if (textEl) {
+                const collapsed = (typeof getCollapsedText === 'function')
+                    ? getCollapsedText(full)
+                    : this.truncateText(full);
+                textEl.textContent = nextExpanded ? full : collapsed;
+            }
+
+            // Update toggle label + icon
+            toggle.setAttribute('aria-label', nextExpanded ? 'See less' : 'See more');
+            toggle.innerHTML = `
+                <span>${nextExpanded ? 'See less' : 'See more'}</span>
+                <span>${this.fa(nextExpanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down')}</span>
+            `;
+        };
+
+        toggle.onclick = activate;
+        toggle.addEventListener('keydown', (e) => {
+            const k = e.key;
+            if (k === 'Enter' || k === ' ') activate(e);
+        });
     }
 
     // ==================== ELEMENT CACHING ====================
@@ -221,6 +391,75 @@ class UIHandler {
         });
     }
 
+    // ==================== STEP MICROCOPY ====================
+
+    getStepMicrocopy(stepId) {
+        return this.stepMicrocopy && this.stepMicrocopy[stepId] ? this.stepMicrocopy[stepId] : null;
+    }
+
+    getStepBannerMessageEl(stepId) {
+        // Prefer the banner inside the step container (avoids clobbering banners on other steps)
+        const stepContainer = document.getElementById(`step-${stepId}`);
+        const scoped = stepContainer ? stepContainer.querySelector('.help-banner .help-banner-content p') : null;
+        if (scoped) return scoped;
+
+        // Fallback: any help-banner on the page (useful if your HTML is structured differently)
+        return document.querySelector('.help-banner .help-banner-content p');
+    }
+
+    applyStepMicrocopyHtml(stepId, html) {
+        const p = this.getStepBannerMessageEl(stepId);
+        if (!p) return;
+
+        const prefersReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+        // No animation requested/available
+        if (prefersReduced) {
+            p.innerHTML = html;
+            return;
+        }
+
+        // Ensure base class is present for transitions
+        p.classList.add('microcopy-fade');
+
+        // Fade out, swap, then fade back in
+        p.classList.add('microcopy-hidden');
+
+        window.setTimeout(() => {
+            p.innerHTML = html;
+
+            // Next frame so the browser registers the content swap before fading in
+            requestAnimationFrame(() => {
+                p.classList.remove('microcopy-hidden');
+            });
+        }, 160);
+    }
+
+    rotateStepMicrocopy(stepId) {
+        const messages = this.getStepMicrocopy(stepId);
+        if (!messages || messages.length === 0) return;
+
+        const cursor = this.stepMicrocopyCursor[stepId] || 0;
+        const messageHtml = messages[cursor];
+
+        this.stepMicrocopyCurrent[stepId] = messageHtml;
+        this.applyStepMicrocopyHtml(stepId, messageHtml);
+
+        this.stepMicrocopyCursor[stepId] = (cursor + 1) % messages.length;
+    }
+
+    restoreStepMicrocopy(stepId) {
+        const current = this.stepMicrocopyCurrent[stepId];
+        if (!current) {
+            // First-time render for this step
+            this.rotateStepMicrocopy(stepId);
+            return;
+        }
+
+        // If the banner got re-rendered by other UI updates, put the current text back
+        this.applyStepMicrocopyHtml(stepId, current);
+    }
+
     // ==================== MASTER UPDATE FUNCTION ====================
     updateUI() {
         // Update progress steps
@@ -268,6 +507,12 @@ class UIHandler {
         return `$${this.calculator.formatNumber(typeof numberFallback === 'number' ? numberFallback : 0)}`;
     }
 
+    getIndustryDisplayName(industryId) {
+        const industry = this.config.INDUSTRIES.find(i => i.id === industryId);
+        if (!industry) return '';
+        return industry.summaryName || industry.name || '';
+    }
+
     getServiceBaseDisplay(service) {
         // Show service base price RANGE if present
         if (service && service.basePriceRange && typeof this.calculator.formatCurrencyRange === 'function') {
@@ -305,16 +550,68 @@ class UIHandler {
     }
 
     showStep(stepId) {
-        // Avoid double-updates if caller already set it
-        if (this.state.currentStep !== stepId) {
-            this.state.update({ currentStep: stepId });
-        } else {
-            // Still ensure visibility + scroll behavior
-            this.showCurrentStep();
+        const currentStep = this.state.currentStep;
+
+        // If already on the step, just ensure visibility + scroll
+        if (currentStep === stepId) {
+            this.showCurrentStep(true);
+            this.scrollToTop();
+            return;
         }
 
-        // Auto-scroll to top on step transitions
-        this.scrollToTop();
+        const prefersReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+        // Reduced motion: switch instantly
+        if (prefersReduced) {
+            this.state.update({ currentStep: stepId });
+            this.scrollToTop();
+            return;
+        }
+
+        // Prevent double transitions (rapid clicking)
+        if (this._isStepTransitioning) return;
+        this._isStepTransitioning = true;
+
+        const currentEl = document.getElementById(`step-${currentStep}`);
+        const exitDurationMs = 260;
+
+        const switchStep = () => {
+            // Clear any exiting state before switching
+            if (currentEl) currentEl.classList.remove('exiting');
+
+            this.state.update({ currentStep: stepId });
+
+            // Scroll after step becomes active
+            this.scrollToTop();
+
+            this._isStepTransitioning = false;
+        };
+
+        // If we can't find the current container, just switch
+        if (!currentEl) {
+            switchStep();
+            return;
+        }
+
+        // Trigger exit animation on the current step
+        currentEl.classList.add('active');   // ensure it's visible
+        currentEl.classList.add('exiting');
+
+        let done = false;
+        const onExitDone = (e) => {
+            // Ignore bubbled animationend from children
+            if (e && e.target !== currentEl) return;
+            if (done) return;
+            done = true;
+
+            currentEl.removeEventListener('animationend', onExitDone);
+            switchStep();
+        };
+
+        currentEl.addEventListener('animationend', onExitDone);
+
+        // Fallback in case animationend doesn't fire (edge cases / browser quirks)
+        setTimeout(() => onExitDone(), exitDurationMs + 80);
     }
 
     scrollToTop() {
@@ -394,16 +691,22 @@ class UIHandler {
         document.body.setAttribute('aria-busy', isLoading ? 'true' : 'false');
     }
 
-    showCurrentStep() {
+    showCurrentStep(force = false) {
+        // Avoid re-triggering enter animations on every state update
+        if (!force && this._lastRenderedStep === this.state.currentStep) return;
+        this._lastRenderedStep = this.state.currentStep;
+
         // Hide all steps first
         document.querySelectorAll('.step-content').forEach(el => {
             el.classList.remove('active');
+            el.classList.remove('exiting');
         });
 
         // Show current step
         const currentStepEl = document.getElementById(`step-${this.state.currentStep}`);
         if (currentStepEl) {
             currentStepEl.classList.add('active');
+            this.restoreStepMicrocopy(this.state.currentStep);
         }
     }
 
@@ -503,16 +806,24 @@ class UIHandler {
 
             // Keep structure stable, but hide price on Step 1 cards
             const baseRangeText = this.getServiceBaseDisplay(service);
-
             const serviceIcon = this.getServiceIcon(service);
+
+            // See more logic (service description)
+            const fullDesc = service.description || '';
+            const needsSeeMore = this.shouldShowSeeMore(fullDesc);
+            const seeKey = this.getSeeMoreKey('service', service.id, 'desc');
+            const expanded = this.isSeeMoreExpanded(seeKey);
+            const collapsedDesc = this.getCollapsedCopyForViewport(fullDesc, 92);
+            const descDisplay = needsSeeMore ? (expanded ? fullDesc : collapsedDesc) : fullDesc;
 
             serviceCard.innerHTML = `
                 <div class="service-icon">${serviceIcon}</div>
                 <div class="service-content">
                     ${hasRecommendedBadge ? '<div class="recommended-badge"><i class="fa-solid fa-fire" aria-hidden="true"></i> Most Popular</div>' : ''}
                     <h3>${service.name}</h3>
-                    <p>${service.description}</p>
+                    <p class="service-description">${descDisplay}</p>
                     <div class="service-range-hint" style="display:none;">${baseRangeText}${service.isMonthly ? '<span class="price-period">/month</span>' : ''}</div>
+                    ${needsSeeMore ? this.renderSeeMoreToggleHtml(seeKey, expanded) : ''}
                 </div>
                 <div class="selection-indicator">
                     <div class="selection-dot"></div>
@@ -520,6 +831,17 @@ class UIHandler {
             `;
 
             container.appendChild(serviceCard);
+
+            // Bind see more toggle without toggling service selection
+            if (needsSeeMore) {
+                this.bindSeeMoreToggle(
+                    serviceCard,
+                    seeKey,
+                    () => fullDesc,
+                    () => serviceCard.querySelector('.service-description'),
+                    () => this.getCollapsedCopyForViewport(fullDesc, 92)
+                );
+            }
         });
 
         if (this.elements.servicesContinue) {
@@ -545,6 +867,7 @@ class UIHandler {
                 <h3>${this.fa('fa-solid fa-building')} What industry are you in?</h3>
                 <p>This helps us customize templates and workflows for your business</p>
                 <div class="config-grid three-col" id="industry-grid"></div>
+                <div class="list-expand-control" id="industry-view-more"></div>
             </div>
 
             <div class="tab-section">
@@ -562,11 +885,18 @@ class UIHandler {
 
     renderIndustryGrid() {
         const container = document.getElementById('industry-grid');
+        const viewMoreContainer = document.getElementById('industry-view-more');
         if (!container) return;
 
         container.innerHTML = '';
+        if (viewMoreContainer) viewMoreContainer.innerHTML = '';
 
-        this.config.INDUSTRIES.forEach(industry => {
+        const visibleCount = 6;
+        const industriesToShow = this._expandedIndustries
+            ? this.config.INDUSTRIES
+            : this.config.INDUSTRIES.slice(0, visibleCount);
+
+        industriesToShow.forEach(industry => {
             const isSelected = this.state.commonConfig.industry === industry.id;
             const option = document.createElement('div');
             option.className = `config-option ${isSelected ? 'selected' : ''}`;
@@ -584,10 +914,26 @@ class UIHandler {
             option.innerHTML = `
                 <span class="option-icon">${industryIcon}</span>
                 <div class="option-title">${industry.name}</div>
+                ${industry.subtitle ? `<div class="option-subtitle">${industry.subtitle}</div>` : ''}
             `;
 
             container.appendChild(option);
         });
+
+        if (!viewMoreContainer || this.config.INDUSTRIES.length <= visibleCount) return;
+
+        const hiddenCount = Math.max(0, this.config.INDUSTRIES.length - visibleCount);
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'list-expand-btn';
+        toggleBtn.innerHTML = this._expandedIndustries
+            ? `<span>Show Less Industries</span><span>${this.fa('fa-solid fa-chevron-up')}</span>`
+            : `<span>View More Industries (${hiddenCount})</span><span>${this.fa('fa-solid fa-chevron-down')}</span>`;
+        toggleBtn.onclick = () => {
+            this._expandedIndustries = !this._expandedIndustries;
+            this.renderIndustryGrid();
+        };
+        viewMoreContainer.appendChild(toggleBtn);
     }
 
     renderScaleGrid() {
@@ -638,10 +984,14 @@ class UIHandler {
             <div class="help-banner" style="margin: 0; border-radius: 0;">
                 <span class="help-banner-icon">${this.fa('fa-solid fa-bullseye')}</span>
                 <div class="help-banner-content">
-                    <p>Use the tabs below to configure each service. Your progress is saved automatically as you go.</p>
+                    <p>Click each service button below to configure it. Complete all selected services before continuing.</p>
                 </div>
             </div>
 
+            <div class="details-tabs-hint">
+                <span>${this.fa('fa-solid fa-hand-pointer')}</span>
+                <span>Configure each selected service (required)</span>
+            </div>
             <div class="service-tabs" id="service-tabs"></div>
             <div id="tab-contents"></div>
         `;
@@ -660,6 +1010,7 @@ class UIHandler {
         const container = document.getElementById('service-tabs');
         if (!container) return;
 
+        container.classList.toggle('two-col-layout', this.state.selectedServices.length >= 4);
         container.innerHTML = '';
 
         this.state.selectedServices.forEach(serviceId => {
@@ -735,6 +1086,7 @@ class UIHandler {
                     <h3>${this.fa('fa-solid fa-plus')} Add-ons (Optional)</h3>
                     <p>Enhance your service with optional add-ons</p>
                     <div class="config-grid" id="addons-${serviceId}"></div>
+                    <div class="list-expand-control" id="addons-view-more-${serviceId}"></div>
                 </div>
             `;
 
@@ -787,22 +1139,41 @@ class UIHandler {
 
             const capIcon = this.getCapabilityIcon(capability);
 
+            // See more logic (capability pitch)
+            const fullPitch = capability.pitch || '';
+            const needsSeeMore = this.shouldShowSeeMore(fullPitch);
+            const seeKey = this.getSeeMoreKey('cap', serviceId, capId);
+            const expanded = this.isSeeMoreExpanded(seeKey);
+            const collapsedPitch = this.getCollapsedCopyForViewport(fullPitch, 92);
+            const pitchDisplay = needsSeeMore ? (expanded ? fullPitch : collapsedPitch) : fullPitch;
+
             option.innerHTML = `
                 <span class="option-icon">${capIcon}</span>
                 <div class="option-title">
                     ${capability.name}
                     ${isIncluded ? '<span class="included-badge">Included</span>' : ''}
                 </div>
-                <div class="option-description">${capability.pitch || ''}</div>
+                <div class="option-description">${pitchDisplay}</div>
                 ${
                     isIncluded
                         ? `<div class="option-price included-price">Included</div>`
                         : (capability.price > 0 ? `<div class="option-price">+$${capability.price}</div>` : '')
                 }
                 ${capability.isPopularBundlePart ? `<div class="bundle-indicator">Popular Bundle Item</div>` : ''}
+                ${needsSeeMore ? this.renderSeeMoreToggleHtml(seeKey, expanded) : ''}
             `;
 
             container.appendChild(option);
+
+            if (needsSeeMore) {
+                this.bindSeeMoreToggle(
+                    option,
+                    seeKey,
+                    () => fullPitch,
+                    () => option.querySelector('.option-description'),
+                    () => this.getCollapsedCopyForViewport(fullPitch, 92)
+                );
+            }
         });
     }
 
@@ -843,15 +1214,18 @@ class UIHandler {
 
     renderAddons(serviceId) {
         const container = document.getElementById(`addons-${serviceId}`);
+        const viewMoreContainer = document.getElementById(`addons-view-more-${serviceId}`);
         if (!container) return;
 
         const config = this.state.serviceConfigs[serviceId] || {};
 
-        // Determine which addons to show (all if toggled, otherwise first 4)
-        const showAll = this.state.preferences.showAllAddons;
-        const addonsToShow = showAll ? this.config.ADDONS : this.config.ADDONS.slice(0, 4);
+        // UI-only expansion state per selected service tab
+        const visibleCount = 4;
+        const showAll = !!this._expandedAddonsByService[serviceId];
+        const addonsToShow = showAll ? this.config.ADDONS : this.config.ADDONS.slice(0, visibleCount);
 
         container.innerHTML = '';
+        if (viewMoreContainer) viewMoreContainer.innerHTML = '';
 
         addonsToShow.forEach(addon => {
             const isSelected = (config.addons || []).includes(addon.id);
@@ -879,36 +1253,54 @@ class UIHandler {
 
             const addonIcon = this.getAddonIcon(addon);
 
+            // See more logic (addon description)
+            const fullDesc = addon.description || '';
+            const needsSeeMore = this.shouldShowSeeMore(fullDesc);
+            const seeKey = this.getSeeMoreKey('addon', serviceId, addon.id);
+            const expanded = this.isSeeMoreExpanded(seeKey);
+            const collapsedDesc = this.getCollapsedCopyForViewport(fullDesc, 92);
+            const descDisplay = needsSeeMore ? (expanded ? fullDesc : collapsedDesc) : fullDesc;
+
             option.innerHTML = `
                 <span class="option-icon">${addonIcon}</span>
                 <div class="option-title">${addon.name}</div>
-                <div class="option-description">${addon.description}</div>
+                <div class="option-description">${descDisplay}</div>
                 <div class="option-price">${addonDisplay}</div>
+                ${needsSeeMore ? this.renderSeeMoreToggleHtml(seeKey, expanded) : ''}
             `;
 
             container.appendChild(option);
+
+            if (needsSeeMore) {
+                this.bindSeeMoreToggle(
+                    option,
+                    seeKey,
+                    () => fullDesc,
+                    () => option.querySelector('.option-description'),
+                    () => this.getCollapsedCopyForViewport(fullDesc, 92)
+                );
+            }
         });
 
-        // Add view more toggle if not showing all
-        if (!showAll && this.config.ADDONS.length > 4) {
-            const viewMoreOption = document.createElement('div');
-            viewMoreOption.className = 'config-option view-more-option';
-            viewMoreOption.onclick = () => {
-                this.state.update({
-                    preferences: {
-                        ...this.state.preferences,
-                        showAllAddons: true
-                    }
-                });
-            };
+        if (!viewMoreContainer || this.config.ADDONS.length <= visibleCount) return;
 
-            viewMoreOption.innerHTML = `
-                <span class="option-icon"><i class="fa-solid fa-plus" aria-hidden="true"></i></span>
-                <div class="option-title">View More Add-ons</div>
-                <div class="option-description">See ${this.config.ADDONS.length - 4} more technical enhancements</div>
-            `;
-
-            container.appendChild(viewMoreOption);
+        const hiddenCount = Math.max(0, this.config.ADDONS.length - visibleCount);
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'list-expand-btn';
+        toggleBtn.innerHTML = showAll
+            ? `<span>Show Less Add-ons</span><span>${this.fa('fa-solid fa-chevron-up')}</span>`
+            : `<span>View More Add-ons (${hiddenCount})</span><span>${this.fa('fa-solid fa-chevron-down')}</span>`;
+        toggleBtn.onclick = () => {
+            this._expandedAddonsByService[serviceId] = !showAll;
+            this.renderAddons(serviceId);
+        };
+        viewMoreContainer.appendChild(toggleBtn);
+        if (!showAll && this.config.ADDONS.length > visibleCount) {
+            const note = document.createElement('p');
+            note.className = 'list-expand-note';
+            note.textContent = `See ${hiddenCount} more technical enhancements`;
+            viewMoreContainer.appendChild(note);
         }
     }
 
@@ -999,7 +1391,7 @@ class UIHandler {
                     ${industry ? `
                         <div class="scope-item">
                             <div class="scope-label">${this.fa('fa-solid fa-building')} Industry</div>
-                            <div class="scope-value">${industry.name}</div>
+                            <div class="scope-value">${this.getIndustryDisplayName(industry.id)}</div>
                             ${industry.multiplier > 1 ? `<div class="scope-note">${Math.round((industry.multiplier - 1) * 100)}% complexity adjustment</div>` : ''}
                         </div>
                     ` : ''}
@@ -1249,7 +1641,7 @@ class UIHandler {
                 ${this.state.commonConfig.industry ? `
                     <div class="detail-item">
                         <span class="detail-label"><i class="fa-solid fa-building" aria-hidden="true"></i> Industry</span>
-                        <span class="detail-value">${this.config.INDUSTRIES.find(i => i.id === this.state.commonConfig.industry)?.name}</span>
+                        <span class="detail-value">${this.getIndustryDisplayName(this.state.commonConfig.industry)}</span>
                     </div>
                 ` : ''}
                 ${this.state.commonConfig.scale ? `
@@ -1373,3 +1765,4 @@ class UIHandler {
 document.addEventListener('DOMContentLoaded', () => {
     window.uiHandler = new UIHandler();
 });
+

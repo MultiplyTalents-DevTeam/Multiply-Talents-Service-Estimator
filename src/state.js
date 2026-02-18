@@ -112,7 +112,7 @@ class EstimatorState {
         if (!this.serviceConfigs[serviceId]) {
             this.serviceConfigs[serviceId] = {
                 capabilities: [],
-                serviceLevel: 'premium',
+                serviceLevel: 'standard',
                 addons: []
             };
         }
