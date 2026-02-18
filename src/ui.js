@@ -495,6 +495,36 @@ class UIHandler {
 
         // Update bundles display
         this.renderBundles();
+
+        // Ensure keyboard users can access dynamic card controls after each render
+        this.ensureInteractiveAccessibility();
+    }
+
+    ensureInteractiveAccessibility() {
+        const selectors = ['.service-card', '.config-option', '.service-tab', '#video-option', '.see-more-toggle'];
+        const interactiveEls = document.querySelectorAll(selectors.join(','));
+
+        interactiveEls.forEach((el) => {
+            const tag = (el.tagName || '').toLowerCase();
+            const isNativeInteractive = ['button', 'a', 'input', 'select', 'textarea'].includes(tag);
+
+            if (!isNativeInteractive && !el.hasAttribute('tabindex')) {
+                el.setAttribute('tabindex', '0');
+            }
+
+            if (!isNativeInteractive && !el.hasAttribute('role')) {
+                el.setAttribute('role', 'button');
+            }
+
+            if (el.dataset.kbBound === '1') return;
+            el.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    el.click();
+                }
+            });
+            el.dataset.kbBound = '1';
+        });
     }
 
     // ==================== RANGE DISPLAY HELPERS ====================
