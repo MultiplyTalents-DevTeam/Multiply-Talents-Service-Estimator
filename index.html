@@ -30,13 +30,13 @@
                                     <h2>Select Your High-Impact Services</h2>
                                     <p>Choose the solutions that will move the needle for your business growth</p>
                                     <div class="context-indicator">
-                                        <span>📍</span>
+                                        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
                                         <span>Step 1 of 5: Selecting Services</span>
                                     </div>
                                 </div>
                                 <div class="step-body">
                                     <div class="help-banner">
-                                        <span class="help-banner-icon">🏆</span>
+                                        <span class="help-banner-icon"><i class="fa-solid fa-trophy" aria-hidden="true"></i></span>
                                         <div class="help-banner-content">
                                             <p><strong>Bundle & Save:</strong> Multi-service selections automatically trigger our agency partnership discounts.</p>
                                         </div>
@@ -54,7 +54,7 @@
                                     <h2>Define Your Business Environment</h2>
                                     <p>We tailor our architecture based on your current scale and industry requirements</p>
                                     <div class="context-indicator">
-                                        <span>📍</span>
+                                        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
                                         <span>Step 2 of 5: Defining Scope</span>
                                     </div>
                                 </div>
@@ -71,7 +71,7 @@
                                     <h2>Customize Your Capabilities</h2>
                                     <p>Select the specific tools and features required for your custom GoHighLevel build</p>
                                     <div class="context-indicator">
-                                        <span>📍</span>
+                                        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
                                         <span>Step 3 of 5: Configuring Details</span>
                                     </div>
                                 </div>
@@ -88,7 +88,7 @@
                                     <h2>Review Your Strategic Investment</h2>
                                     <p>Transparent pricing compared against a typical US-based (On Shore) agency range in your country</p>
                                     <div class="context-indicator">
-                                        <span>📍</span>
+                                        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
                                         <span>Step 4 of 5: Reviewing Proposal</span>
                                     </div>
                                 </div>
@@ -105,7 +105,7 @@
                                     <h2>Secure Your Custom Estimate & Strategy</h2>
                                     <p>Complete the form to receive your detailed roadmap and implementation plan</p>
                                     <div class="context-indicator">
-                                        <span>📍</span>
+                                        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
                                         <span>Step 5 of 5: Execution Roadmap</span>
                                     </div>
                                 </div>
@@ -132,7 +132,7 @@
                                             </div>
 
                                             <div class="help-banner">
-                                                <span class="help-banner-icon">🔒</span>
+                                                <span class="help-banner-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
                                                 <div class="help-banner-content">
                                                     <p>Your business data is protected. We will review your selection and prepare your custom strategy.</p>
                                                 </div>
@@ -141,45 +141,42 @@
                                             <form id="quote-form">
                                                 <div class="form-row">
                                                     <div class="form-group">
-                                                        <input type="text" class="form-input" name="firstName" placeholder="First Name *" required>
+                                                        <label class="form-label" for="first-name">First Name *</label>
+                                                        <input id="first-name" type="text" class="form-input" name="firstName" placeholder="First Name" autocomplete="given-name" required>
                                                     </div>
                                                     <div class="form-group">
-                                                        <input type="text" class="form-input" name="lastName" placeholder="Last Name *" required>
+                                                        <label class="form-label" for="last-name">Last Name *</label>
+                                                        <input id="last-name" type="text" class="form-input" name="lastName" placeholder="Last Name" autocomplete="family-name" required>
                                                     </div>
                                                 </div>
                                                 <div class="form-group">
-                                                    <input type="email" class="form-input" name="email" placeholder="Business Email Address *" required>
+                                                    <label class="form-label" for="business-email">Business Email Address *</label>
+                                                    <input id="business-email" type="email" class="form-input" name="email" placeholder="name@company.com" autocomplete="email" required>
                                                 </div>
                                                 <div class="form-group">
-                                                    <input type="tel" class="form-input" name="phone" placeholder="Phone Number *" inputmode="tel" autocomplete="tel" required>
+                                                    <label class="form-label" for="phone-number">Phone Number *</label>
+                                                    <input id="phone-number" type="tel" class="form-input" name="phone" placeholder="(000) 000-0000" inputmode="tel" autocomplete="tel" required>
                                                 </div>
                                                 <div class="form-group">
-                                                    <input type="text" class="form-input" name="company" placeholder="Company / Business Name *" required>
+                                                    <label class="form-label" for="company-name">Company / Business Name *</label>
+                                                    <input id="company-name" type="text" class="form-input" name="company" placeholder="Your Company Name" autocomplete="organization" required>
                                                 </div>
                                                 <div class="form-group">
-                                                    <textarea class="form-input form-textarea" name="projectDescription" placeholder="Briefly describe your current bottlenecks or goals..." rows="3"></textarea>
+                                                    <label class="form-label" for="project-description">Project Goals / Bottlenecks</label>
+                                                    <textarea id="project-description" class="form-input form-textarea" name="projectDescription" placeholder="Share your goals, blockers, and timeline." rows="3"></textarea>
                                                 </div>
-                                                
-                                                <button type="button" class="video-option" id="video-option">
-                                                    <div class="checkbox" id="video-checkbox">
-                                                        <span class="checkbox-check">✓</span>
-                                                    </div>
-                                                    <div class="video-option-text">
-                                                        <h4>Get a Personalized Video Strategy Walkthrough</h4>
-                                                        <p>Our experts will record a Loom explaining your custom build-out plan</p>
-                                                    </div>
-                                                </button>
-
-                                                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1.25rem;">
-                                                    Secure My Custom Estimate & Strategy
-                                                </button>
+                                                <div class="form-submit-bar">
+                                                    <button type="submit" class="btn btn-primary form-submit-btn">
+                                                        Secure My Custom Estimate & Strategy
+                                                    </button>
+                                                </div>
                                             </form>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="step-footer">
                                     <button id="contact-back" class="btn btn-ghost">← Back to Review</button>
-                                    <button class="btn btn-outline-sm" onclick="location.reload()">Start New Estimate</button>
+                                    <button class="btn btn-ghost" onclick="location.reload()">Start New Estimate</button>
                                 </div>
                             </div>
                         </div>
@@ -188,7 +185,7 @@
                         <div class="summary-card">
                             <div class="summary-header">
                                 <div class="summary-title">
-                                    <div class="summary-icon">💎</div>
+                                    <div class="summary-icon"><i class="fa-solid fa-gem" aria-hidden="true"></i></div>
                                     <div>
                                         <h3>Investment Summary</h3>
                                         <p id="sidebar-status">Live Estimate</p>
@@ -198,7 +195,7 @@
                             
                             <div class="summary-content" id="summary-content">
                                 <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i></div>
                                     <p style="font-weight: 500; margin-bottom: 0.25rem;">No Services Selected</p>
                                     <p style="font-size: 0.875rem;">Select services to see your ROI-based investment</p>
                                 </div>
@@ -214,7 +211,7 @@
     <div id="calendar-modal" class="hidden" aria-hidden="true">
         <div class="calendar-modal-backdrop" data-calendar-close></div>
         <div class="calendar-modal-panel" role="dialog" aria-modal="true" aria-labelledby="calendar-modal-title">
-            <button type="button" class="calendar-modal-close" id="calendar-close" aria-label="Close calendar">✕</button>
+            <button type="button" class="calendar-modal-close" id="calendar-close" aria-label="Close calendar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
             <div class="calendar-modal-header">
                 <h3 id="calendar-modal-title">Book an Implementation Call</h3>
                 <p>Pick a time that works for you.</p>
@@ -268,3 +265,4 @@
     </script>
 </body>
 </html>
+

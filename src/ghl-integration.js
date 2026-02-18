@@ -174,7 +174,20 @@ class GHLIntegration {
   }
 
   mapIndustryToOptionValue(industryId) {
-    return industryId || 'other';
+    const map = {
+      medical_aesthetics: 'medical_dental',
+      private_healthcare: 'medical_dental',
+      home_services: 'home_services',
+      education_training: 'elearning_coaches',
+      real_estate: 'agency_saas',
+      automotive_services: 'home_services',
+      professional_services: 'agency_saas',
+      legal_firms: 'agency_saas',
+      fitness_training: 'elearning_coaches',
+      food_catering: 'home_services',
+      other: 'other'
+    };
+    return map[industryId] || industryId || 'other';
   }
 
   mapScaleToOptionValue(scaleId) {
