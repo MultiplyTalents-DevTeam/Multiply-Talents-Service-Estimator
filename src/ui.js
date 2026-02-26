@@ -151,6 +151,7 @@ class UIHandler {
             professional_services: 'fa-solid fa-briefcase',
             legal_firms: 'fa-solid fa-scale-balanced',
             fitness_training: 'fa-solid fa-dumbbell',
+            insurance_financial_services: 'fa-solid fa-shield',
             food_catering: 'fa-solid fa-utensils',
             other: 'fa-solid fa-shapes'
         };

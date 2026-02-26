@@ -184,6 +184,7 @@ class GHLIntegration {
       professional_services: 'agency_saas',
       legal_firms: 'agency_saas',
       fitness_training: 'elearning_coaches',
+      insurance_financial_services: 'agency_saas',
       food_catering: 'home_services',
       other: 'other'
     };
