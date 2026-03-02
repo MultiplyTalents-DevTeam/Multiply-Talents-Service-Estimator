@@ -339,6 +339,8 @@ class UIHandler {
             quoteForm: document.getElementById('quote-form'),
             videoOption: document.getElementById('video-option'),
             videoCheckbox: document.getElementById('video-checkbox'),
+            regionPh: document.getElementById('region-ph'),
+            regionNonPh: document.getElementById('region-non-ph'),
 
             // Bundles display
             bundlesContainer: document.getElementById('bundles-container'),
@@ -379,6 +381,13 @@ class UIHandler {
         // Video option toggle
         if (this.elements.videoOption) {
             this.elements.videoOption.onclick = () => this.toggleVideoOption();
+        }
+
+        if (this.elements.regionPh) {
+            this.elements.regionPh.onclick = () => this.setRegionSelection('ph');
+        }
+        if (this.elements.regionNonPh) {
+            this.elements.regionNonPh.onclick = () => this.setRegionSelection('non_ph');
         }
 
         // View more addons toggle
@@ -826,6 +835,7 @@ class UIHandler {
         const container = this.elements.servicesGrid;
         if (!container) return;
 
+        this.renderRegionSelector();
         container.innerHTML = '';
 
         Object.values(this.config.SERVICES).forEach(service => {
@@ -876,7 +886,8 @@ class UIHandler {
         });
 
         if (this.elements.servicesContinue) {
-            this.elements.servicesContinue.disabled = this.state.selectedServices.length === 0;
+            this.elements.servicesContinue.disabled =
+                this.state.selectedServices.length === 0 || !this.state.preferences.regionSelection;
         }
     }
 
@@ -1610,7 +1621,7 @@ class UIHandler {
                 <div class="price-anchor">
                     <div class="anchor-label"><i class="fa-solid fa-gem" aria-hidden="true"></i> On Shore Agency Value</div>
                     <div class="anchor-value">${westernDisplay}</div>
-                    <div class="anchor-note">Estimated range from a typical US-based agency in your country</div>
+                    <div class="anchor-note">Estimated range from an on-shore agency based in your country</div>
                 </div>
             </div>
         `;
@@ -1815,6 +1826,83 @@ class UIHandler {
         });
     }
 
+    renderRegionSelector() {
+        const { regionPh, regionNonPh } = this.elements;
+        if (!regionPh || !regionNonPh) return;
+
+        const current = this.state.preferences.regionSelection;
+        regionPh.classList.toggle('active', current === 'ph');
+        regionNonPh.classList.toggle('active', current === 'non_ph');
+        regionPh.setAttribute('aria-pressed', current === 'ph' ? 'true' : 'false');
+        regionNonPh.setAttribute('aria-pressed', current === 'non_ph' ? 'true' : 'false');
+    }
+
+    setRegionSelection(selection) {
+        if (selection !== 'ph' && selection !== 'non_ph') return;
+
+        const previous = this.state.preferences.regionSelection;
+        this.state.update({
+            preferences: {
+                ...this.state.preferences,
+                regionSelection: selection
+            }
+        });
+
+        if (selection === 'ph' && previous !== 'ph') {
+            this.showToast('Napili mo ang PH. May separate pricing package kami para sa mga Pilipinong clients.');
+        }
+    }
+
+    showToast(message) {
+        if (!message) return;
+
+        let toast = document.getElementById('app-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'app-toast';
+            toast.className = 'app-toast';
+            toast.setAttribute('role', 'status');
+            toast.setAttribute('aria-live', 'polite');
+            toast.innerHTML = `
+                <div class="app-toast-content">
+                    <div class="app-toast-message"></div>
+                    <button type="button" class="app-toast-close" aria-label="Close message">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+            `;
+            const closeBtn = toast.querySelector('.app-toast-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.hideToast());
+            }
+            document.body.appendChild(toast);
+        }
+
+        const messageEl = toast.querySelector('.app-toast-message');
+        if (messageEl) {
+            messageEl.textContent = message;
+        }
+        toast.classList.add('visible');
+
+        if (this._toastTimer) {
+            window.clearTimeout(this._toastTimer);
+        }
+
+        this._toastTimer = window.setTimeout(() => {
+            this.hideToast();
+        }, 8000);
+    }
+
+    hideToast() {
+        const toast = document.getElementById('app-toast');
+        if (!toast) return;
+        toast.classList.remove('visible');
+        if (this._toastTimer) {
+            window.clearTimeout(this._toastTimer);
+            this._toastTimer = null;
+        }
+    }
+
     toggleAllAddons() {
         this.state.update({
             preferences: {
@@ -1828,7 +1916,8 @@ class UIHandler {
     updateNavigation() {
         // Update all navigation button states
         if (this.elements.servicesContinue) {
-            this.elements.servicesContinue.disabled = this.state.selectedServices.length === 0;
+            this.elements.servicesContinue.disabled =
+                this.state.selectedServices.length === 0 || !this.state.preferences.regionSelection;
         }
 
         if (this.elements.scopeContinue) {

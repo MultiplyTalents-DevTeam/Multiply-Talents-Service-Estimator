@@ -15,7 +15,8 @@ class EstimatorState {
         this.serviceConfigs = {};
         this.preferences = {
             wantsVideo: false,
-            showAllAddons: false // New: Tracks "View More Add-ons" toggle state
+            showAllAddons: false, // New: Tracks "View More Add-ons" toggle state
+            regionSelection: 'non_ph'
         };
         this.activeTab = null;
         
@@ -126,7 +127,7 @@ class EstimatorState {
     validateStep(step) {
         switch(step) {
             case 'services':
-                return this.selectedServices.length > 0;
+                return this.selectedServices.length > 0 && !!this.preferences.regionSelection;
             
             case 'scope':
                 // Check if Industry and Business Scale are selected
@@ -159,7 +160,8 @@ class EstimatorState {
         this.serviceConfigs = {};
         this.preferences = { 
             wantsVideo: false,
-            showAllAddons: false 
+            showAllAddons: false,
+            regionSelection: 'non_ph'
         };
         this.activeTab = null;
         this.appliedBundles = [];
