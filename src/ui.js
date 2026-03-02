@@ -1849,7 +1849,7 @@ class UIHandler {
         });
 
         if (selection === 'ph' && previous !== 'ph') {
-            this.showToast('Napili mo ang PH. May separate pricing package kami para sa mga Pilipinong clients.');
+            this.showToast('Napili mo ang PH. May hiwalay kaming presyo para sa mga Pilipinong kliyente.');
         }
     }
 
