@@ -228,6 +228,11 @@ class GHLIntegration {
     const estimateMin = this.toNumber(rangeObj?.min, null);
     const estimateMax = this.toNumber(rangeObj?.max, null);
     const estimateRange = this.buildEstimateRangeString(rangeObj);
+    const estimatedInvestmentDisplay = this.formatMoney(estimatedInvestment);
+    const bundleDiscountDisplay = this.formatMoney(bundleDiscount);
+    const finalQuoteTotalDisplay = this.formatMoney(finalQuoteTotal);
+    const estimateMinDisplay = Number.isFinite(estimateMin) ? this.formatMoney(estimateMin) : '';
+    const estimateMaxDisplay = Number.isFinite(estimateMax) ? this.formatMoney(estimateMax) : '';
 
     const projectDescription = this.toStringSafe(contactData.projectDescription, '');
     const videoWalkthrough = state.preferences?.wantsVideo ? 'yes' : 'no';
@@ -281,14 +286,19 @@ class GHLIntegration {
       business_scale: businessScale,
       industry_type: industryType,
       service_level: serviceLevel,
-      estimated_investment: estimatedInvestment,
-      bundle_discount: bundleDiscount,
-      final_quote_total: finalQuoteTotal,
+      estimated_investment: estimatedInvestmentDisplay,
+      bundle_discount: bundleDiscountDisplay,
+      final_quote_total: finalQuoteTotalDisplay,
 
       // ✅ NEW: range fields for HR/task/note display
       estimate_range: estimateRange,                     // "$1,638 – $1,838"
-      estimate_min: estimateMin,                         // 1638
-      estimate_max: estimateMax,                         // 1838
+      estimate_min: estimateMinDisplay,                  // "$1,638"
+      estimate_max: estimateMaxDisplay,                  // "$1,838"
+      estimated_investment_value: estimatedInvestment,   // 1638
+      bundle_discount_value: bundleDiscount,             // 0
+      final_quote_total_value: finalQuoteTotal,          // 1838
+      estimate_min_value: estimateMin,                   // 1638
+      estimate_max_value: estimateMax,                   // 1838
 
       project_description: projectDescription,
       video_walkthrough: videoWalkthrough,
