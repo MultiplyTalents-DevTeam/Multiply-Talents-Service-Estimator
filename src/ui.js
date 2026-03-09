@@ -1582,7 +1582,7 @@ class UIHandler {
                             const isIncluded = item.included === true || item.amount === 0;
                             return `
                                 <div class="breakdown-item">
-                                    <span class="breakdown-name">• ${item.name}</span>
+                                    <span class="breakdown-name">&bull; ${item.name}</span>
                                     <span class="breakdown-price">${isIncluded ? 'Included' : `+$${this.calculator.formatNumber(item.amount)}`}</span>
                                 </div>
                             `;

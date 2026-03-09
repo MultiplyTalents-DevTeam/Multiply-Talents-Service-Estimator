@@ -2996,3 +2996,66 @@ body.is-loading {
         font-size: clamp(1.32rem, 7.2vw, 1.7rem);
     }
 }
+
+/* ========================================
+   SAFE MOBILE DENSITY PATCH (STEP 4/5)
+======================================== */
+@media (max-width: 520px) {
+    .main-content {
+        padding: 1.25rem 0.5rem;
+    }
+
+    #step-review .step-body,
+    #step-contact .step-body {
+        padding: 0.65rem;
+    }
+
+    #step-review .invoice-card {
+        padding: 0.85rem;
+    }
+
+    #step-review .invoice-service-mobile {
+        margin-bottom: 0.75rem;
+    }
+
+    #step-review .service-rows {
+        padding-top: 0.5rem;
+    }
+
+    #step-review .breakdown-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+        padding: 0.4rem 0;
+    }
+
+    #step-review .breakdown-price {
+        align-self: flex-end;
+        white-space: nowrap;
+    }
+
+    #step-review .service-meta-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    #step-review .level-price {
+        align-self: flex-end;
+    }
+
+    #step-contact .quote-form {
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 390px) {
+    #step-review .service-title h4 {
+        font-size: 1rem;
+    }
+
+    #step-review .service-price {
+        font-size: 1.05rem;
+    }
+}
