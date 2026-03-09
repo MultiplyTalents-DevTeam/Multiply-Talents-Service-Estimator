@@ -264,16 +264,46 @@
 
         // Communication with parent frame for auto-height
         (function () {
-            function sendHeight() {
-                const app = document.getElementById("estimator-app");
-                if (!app) return;
-                const height = app.offsetHeight;
-                window.parent.postMessage({ type: "MT_ESTIMATOR_HEIGHT", height }, "*");
+            var appId = 'estimator-app';
+            var debounceMs = 140;
+            var lastHeight = 0;
+            var debounceTimer = null;
+
+            function postHeight() {
+                var app = document.getElementById(appId);
+                if (!app || !window.parent || window.parent === window) return;
+
+                var height = Math.ceil(app.getBoundingClientRect().height || app.offsetHeight || 0);
+                if (!height || height === lastHeight) return;
+
+                lastHeight = height;
+                window.parent.postMessage({ type: 'MT_ESTIMATOR_HEIGHT', height: height }, '*');
             }
-            window.addEventListener("load", sendHeight);
-            window.addEventListener("resize", sendHeight);
-            const observer = new MutationObserver(() => sendHeight());
-            observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+            function scheduleHeight() {
+                if (debounceTimer) window.clearTimeout(debounceTimer);
+                debounceTimer = window.setTimeout(function () {
+                    debounceTimer = null;
+                    requestAnimationFrame(postHeight);
+                }, debounceMs);
+            }
+
+            window.addEventListener('load', scheduleHeight);
+            window.addEventListener('resize', scheduleHeight);
+
+            var app = document.getElementById(appId);
+            if (app) {
+                var observer = new MutationObserver(function () { scheduleHeight(); });
+                observer.observe(app, { childList: true, subtree: true, characterData: true });
+
+                if (typeof ResizeObserver !== 'undefined') {
+                    var resizeObserver = new ResizeObserver(function () { scheduleHeight(); });
+                    resizeObserver.observe(app);
+                }
+            }
+
+            // Initial post (also catches pre-rendered content)
+            scheduleHeight();
         })();
     </script>
 </body>

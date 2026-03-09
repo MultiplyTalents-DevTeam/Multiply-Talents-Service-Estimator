@@ -64,12 +64,20 @@ class UIHandler {
             this.rotateStepMicrocopy(this.state.currentStep);
         }, this._microcopyIntervalMs);
 
+        // Render diff snapshot (used for selective re-rendering)
+        this._lastRenderSig = null;
+
         // Subscribe to state changes
-        this.state.subscribe(() => this.updateUI());
+        this.state.subscribe((nextState) => {
+            const snapshot = (nextState && typeof nextState.getSnapshot === 'function')
+                ? nextState.getSnapshot()
+                : this.state.getSnapshot();
+            this.updateUI(snapshot);
+        });
 
         // Initialize UI
         this.bindEvents();
-        this.updateUI();
+        this.updateUI(this.state.getSnapshot(), { forceFull: true });
     }
 
     // ==================== ICON HELPERS (FONT AWESOME) ====================
@@ -471,15 +479,27 @@ class UIHandler {
     }
 
     // ==================== MASTER UPDATE FUNCTION ====================
-    updateUI() {
-        // Update progress steps
-        this.renderProgressSteps();
+    buildRenderSignature(snapshot) {
+        const selectedServices = snapshot.selectedServices || [];
+        const serviceConfigs = snapshot.serviceConfigs || {};
+        const serializedConfigs = selectedServices
+            .map((serviceId) => `${serviceId}:${JSON.stringify(serviceConfigs[serviceId] || {})}`)
+            .join('|');
+        const appliedBundles = snapshot.appliedBundles || [];
 
-        // Show/hide step containers
-        this.showCurrentStep();
+        return {
+            currentStep: snapshot.currentStep || 'services',
+            selectedServices: selectedServices.join('|'),
+            scope: `${snapshot.commonConfig?.industry || ''}|${snapshot.commonConfig?.scale || ''}`,
+            activeTab: snapshot.activeTab || '',
+            serviceConfigs: serializedConfigs,
+            preferences: JSON.stringify(snapshot.preferences || {}),
+            bundles: appliedBundles.map((b) => b.id || b.name || '').join('|')
+        };
+    }
 
-        // Update step-specific content
-        switch (this.state.currentStep) {
+    renderCurrentStep(stepId) {
+        switch (stepId) {
             case 'services':
                 this.renderServices();
                 break;
@@ -495,19 +515,88 @@ class UIHandler {
             case 'contact':
                 this.renderContact();
                 break;
+            default:
+                break;
+        }
+    }
+
+    updateUI(snapshot = this.state.getSnapshot(), options = {}) {
+        const nextSig = this.buildRenderSignature(snapshot);
+        const prevSig = this._lastRenderSig;
+        const forceFull = !!options.forceFull || !prevSig;
+
+        const stepChanged = forceFull || nextSig.currentStep !== prevSig.currentStep;
+        const selectedChanged = forceFull || nextSig.selectedServices !== prevSig.selectedServices;
+        const scopeChanged = forceFull || nextSig.scope !== prevSig.scope;
+        const configChanged = forceFull || nextSig.serviceConfigs !== prevSig.serviceConfigs;
+        const activeTabChanged = forceFull || nextSig.activeTab !== prevSig.activeTab;
+        const prefChanged = forceFull || nextSig.preferences !== prevSig.preferences;
+        const bundlesChanged = forceFull || nextSig.bundles !== prevSig.bundles;
+        const quoteChanged = selectedChanged || scopeChanged || configChanged || prefChanged;
+
+        let stepRendered = false;
+
+        // These are only dependent on current step progression
+        if (stepChanged) {
+            this.renderProgressSteps();
+            this.showCurrentStep();
+            this.renderCurrentStep(nextSig.currentStep);
+            stepRendered = true;
+        } else {
+            // Render only current-step UI that is affected by state changes
+            switch (nextSig.currentStep) {
+                case 'services':
+                    if (selectedChanged || prefChanged) {
+                        this.renderServices();
+                        stepRendered = true;
+                    }
+                    break;
+                case 'scope':
+                    if (selectedChanged || scopeChanged) {
+                        this.renderScope();
+                        stepRendered = true;
+                    }
+                    break;
+                case 'details':
+                    if (selectedChanged || configChanged || activeTabChanged || prefChanged) {
+                        this.renderDetails();
+                        stepRendered = true;
+                    }
+                    break;
+                case 'review':
+                    if (quoteChanged || activeTabChanged) {
+                        this.renderReview();
+                        stepRendered = true;
+                    }
+                    break;
+                case 'contact':
+                    if (quoteChanged || prefChanged) {
+                        this.renderContact();
+                        stepRendered = true;
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
 
-        // Always update summary panel
-        this.renderSummary();
+        if (quoteChanged) {
+            this.renderSummary();
+        }
 
-        // Update navigation buttons
-        this.updateNavigation();
+        if (selectedChanged || scopeChanged || configChanged || prefChanged || stepChanged) {
+            this.updateNavigation();
+        }
 
-        // Update bundles display
-        this.renderBundles();
+        if (bundlesChanged) {
+            this.renderBundles();
+        }
 
-        // Ensure keyboard users can access dynamic card controls after each render
-        this.ensureInteractiveAccessibility();
+        if (stepRendered || stepChanged || forceFull) {
+            this.ensureInteractiveAccessibility();
+        }
+
+        this._lastRenderSig = nextSig;
     }
 
     ensureInteractiveAccessibility() {
