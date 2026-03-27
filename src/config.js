@@ -346,7 +346,7 @@ CONFIG.INDUSTRIES = [
     { id: 'medical_aesthetics', name: 'Medical Aesthetics', subtitle: 'Med Spas • Cosmetic Clinics • Aesthetic Dermatology', icon: 'fa-solid fa-spa', multiplier: 1.3 },
     { id: 'private_healthcare', name: 'Private Healthcare', subtitle: 'Dental • Chiropractic • Specialty Clinics', icon: 'fa-solid fa-stethoscope', multiplier: 1.3 },
     { id: 'home_services', name: 'Home Services', subtitle: 'HVAC • Plumbing • Roofing • Electrical • Pest Control', icon: 'fa-solid fa-toolbox', multiplier: 1.0 },
-    { id: 'real_estate', name: 'Real Estate', subtitle: 'Agencies • Teams • Property Management', icon: 'fa-solid fa-house', multiplier: 1.0 },
+    { id: 'real_estate', name: 'Real Estate', subtitle: 'Agencies • Teams • Property Management • Pet Hotels', icon: 'fa-solid fa-house', multiplier: 1.0 },
     { id: 'legal_firms', name: 'Legal Firms', subtitle: 'Immigration • Family Law • Personal Injury', icon: 'fa-solid fa-scale-balanced', multiplier: 1.2 },
     { id: 'professional_services', name: 'Professional Services', subtitle: 'Consultants • Accountants • B2B Services', icon: 'fa-solid fa-briefcase', multiplier: 1.1 },
     { id: 'education_training', name: 'Education & Training', subtitle: 'Coaches • Course Creators • Training Institutes', icon: 'fa-solid fa-graduation-cap', multiplier: 1.0 },
