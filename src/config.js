@@ -10,8 +10,8 @@ const CONFIG = {
     SERVICES: {
         new_ghl_setup: {
             id: 'new_ghl_setup',
-            name: 'New GHL Setup',
-            description: 'Get a professional, turnkey foundation in 7 days without the DIY headache.',
+            name: 'New System Setup',
+            description: 'Get a professional, turnkey system foundation in 7 days without the DIY headache.',
             icon: 'fa-solid fa-rocket',
 
             // BACKWARD COMPAT (do not remove): keep a single number for legacy UIs
@@ -30,7 +30,7 @@ const CONFIG = {
         platform_migration: {
             id: 'platform_migration',
             name: 'Platform Migration',
-            description: 'Stop overpaying for 5 different tools. We’ll move your entire business to GHL seamlessly.',
+            description: "Stop overpaying for 5 different tools. We’ll migrate your entire business into one unified system seamlessly.",
             icon: 'fa-solid fa-right-left',
 
             // BACKWARD COMPAT
@@ -45,7 +45,7 @@ const CONFIG = {
         fix_optimize: {
             id: 'fix_optimize',
             name: 'Fix & Optimize',
-            description: 'Is your GHL messy? We’ll audit your tech stack and plug the leaks in your automation.',
+            description: "Is your system messy? We’ll audit your tech stack and plug the leaks in your automation.",
             icon: 'fa-solid fa-screwdriver-wrench',
 
             // BACKWARD COMPAT
@@ -60,7 +60,7 @@ const CONFIG = {
         monthly_management: {
             id: 'monthly_management',
             name: 'Monthly Management',
-            description: 'Your own dedicated GHL expert for less than a part-time VA’s salary.',
+            description: "Your own dedicated system expert for less than a part-time VA’s salary.",
             icon: 'fa-solid fa-calendar-check',
 
             // BACKWARD COMPAT
@@ -220,7 +220,7 @@ const CONFIG = {
         { id: 'api_integration', name: 'Custom API/Webhook', description: 'We make the impossible possible. Custom bridges for your data.', icon: 'fa-solid fa-code', price: 497, priceRange: { min: 497, max: 497 } },
 
         { id: 'zoom_handoff', name: 'Live Zoom Handoff', description: '1-on-1 walkthrough to ensure you are 100% confident.', icon: 'fa-solid fa-video', price: 147, priceRange: { min: 147, max: 147 } },
-        { id: 'hipaa', name: 'Advanced HIPAA Compliance', description: 'Configure GHL for strict medical security standards.', icon: 'fa-solid fa-shield-halved', price: 497, priceRange: { min: 497, max: 497 } },
+        { id: 'hipaa', name: 'Advanced HIPAA Compliance', description: 'Configure the system for strict medical security standards.', icon: 'fa-solid fa-shield-halved', price: 497, priceRange: { min: 497, max: 497 } },
         { id: 'ab_testing', name: 'A/B Split Testing Setup', description: 'Find the winning design that brings in the most leads.', icon: 'fa-solid fa-flask', price: 197, priceRange: { min: 197, max: 197 } },
         { id: 'custom_css', name: 'Custom CSS/Branding', description: 'High-end, bespoke brand aesthetic that builds instant trust.', icon: 'fa-solid fa-paintbrush', price: 247, priceRange: { min: 247, max: 247 } },
         { id: 'email_audit', name: 'Email Deliverability Audit', description: 'Ensure your emails land in the inbox, not the spam folder.', icon: 'fa-solid fa-envelope-open-text', price: 197, priceRange: { min: 197, max: 197 } }
